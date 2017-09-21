@@ -30,12 +30,12 @@ You need dependencies below.
 
 ### Inference Time
 
-| Dataset | Model                             | Description                                                                              | Inference Time<br/>Single core cpu |
-|---------|-----------------------------------|------------------------------------------------------------------------------------------|---------------:|
-| Coco    | openopse-cmu                      | CMU's original version. Same network, same weights.                                      | 3.65s / image  |
-| Coco    | openpose-depthwise-separable-conv | Same as the cmu version except for the **depthwise separable convolution** of mobilenet. | 0.44s / image  |
-| Coco    | openpose-mobilenet                | | | |
-| Coco    | openpose-lcnn      | | | |
+| Dataset | Model                             | Description                                                                     | Inference Time<br/>1 core cpu |
+|---------|--------------------------|------------------------------------------------------------------------------------------|---------------:|
+| Coco    | cmu                      | CMU's original version. Same network, same weights.                                      | 3.65s / img  |
+| Coco    | dsconv                   | Same as the cmu version except for the **depthwise separable convolution** of mobilenet. | 0.44s / img  |
+| Coco    | mobilenet                | | | |
+| Coco    | lcnn      | | | |
 
 
 ## Training
