@@ -6,9 +6,10 @@ import time
 import logging
 import argparse
 
+from tensorflow.python.client import timeline
+
 from network_cmu import CmuNetwork
 from common import estimate_pose, CocoPairsRender
-from network_kakao import KakaoNetwork
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -24,14 +25,14 @@ if __name__ == '__main__':
     parser.add_argument('--input-width', type=int, default=320)
     parser.add_argument('--input-height', type=int, default=240)
     parser.add_argument('--stage-level', type=int, default=6)
-    parser.add_argument('--model', type=str, default='cmu', help='cmu(original) / kakao(faster version)')
+    parser.add_argument('--model', type=str, default='kakao', help='cmu(original) / kakao(faster version)')
     args = parser.parse_args()
 
     input_node = tf.placeholder(tf.float32, shape=(None, args.input_height, args.input_width, 3), name='image')
 
     with tf.Session(config=config) as sess:
         if args.model == 'kakao':
-            net = KakaoNetwork({'image': input_node}, trainable=False, conv_width=1.0)
+            net = KakaoNetwork({'image': input_node}, trainable=False)
             net.load('./models/numpy/fastopenpose_coco_v170729.npy', sess)
         elif args.model == 'cmu':
             net = CmuNetwork({'image': input_node}, trainable=False)
@@ -66,13 +67,21 @@ if __name__ == '__main__':
         )
         logging.info('inference- elapsed_time={}'.format(time.time() - a))
         a = time.time()
+
+        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+        run_metadata = tf.RunMetadata()
         pafMat, heatMat = sess.run(
             [
                 net.get_output(name='Mconv7_stage{}_L1'.format(args.stage_level)),
                 net.get_output(name='Mconv7_stage{}_L2'.format(args.stage_level))
-            ], feed_dict={'image:0': [image]}
+            ], feed_dict={'image:0': [image]}, options=run_options, run_metadata=run_metadata
         )
         logging.info('inference- elapsed_time={}'.format(time.time() - a))
+
+        tl = timeline.Timeline(run_metadata.step_stats)
+        ctf = tl.generate_chrome_trace_format()
+        with open('timeline.json', 'w') as f:
+            f.write(ctf)
 
         heatMat, pafMat = heatMat[0], pafMat[0]
         heatMat = np.rollaxis(heatMat, 2, 0)

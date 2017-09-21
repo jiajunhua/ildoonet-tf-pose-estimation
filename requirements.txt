@@ -1,1 +1,3 @@
 argparse
+lmdb
+https://github.com/ppwwyyxx/tensorpack

@@ -18,7 +18,7 @@ class CmuNetwork(network_base.BaseNetwork):
              .conv(3, 3, 512, 1, 1, name='conv4_1')
              .conv(3, 3, 512, 1, 1, name='conv4_2')
              .conv(3, 3, 256, 1, 1, name='conv4_3_CPM')
-             .conv(3, 3, 128, 1, 1, name='conv4_4_CPM')
+             .conv(3, 3, 128, 1, 1, name='conv4_4_CPM')          # *****
              .conv(3, 3, 128, 1, 1, name='conv5_1_CPM_L1')
              .conv(3, 3, 128, 1, 1, name='conv5_2_CPM_L1')
              .conv(3, 3, 128, 1, 1, name='conv5_3_CPM_L1')

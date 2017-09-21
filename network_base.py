@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
@@ -68,7 +69,12 @@ class BaseNetwork(object):
                     continue
                 with tf.variable_scope('', reuse=True):
                     var = tf.get_variable(op_name.replace(':0', ''))
-                    session.run(var.assign(data_dict[op_name]))
+                    try:
+                        session.run(var.assign(data_dict[op_name]))
+                    except Exception as e:
+                        print(op_name)
+                        print(e)
+                        sys.exit(-1)
             else:
                 with tf.variable_scope(op_name, reuse=True):
                     for param_name, data in data_dict[op_name].items():
