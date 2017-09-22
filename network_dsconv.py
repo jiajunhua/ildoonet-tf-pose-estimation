@@ -2,7 +2,7 @@ import network_base
 import tensorflow as tf
 
 
-class KakaoNetwork(network_base.BaseNetwork):
+class DSConvNetwork(network_base.BaseNetwork):
     def __init__(self, inputs, trainable=True, conv_width=1.0):
         self.conv_width = conv_width
         network_base.BaseNetwork.__init__(self, inputs, trainable)

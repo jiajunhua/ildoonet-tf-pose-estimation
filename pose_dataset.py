@@ -1,13 +1,17 @@
 import math
 import struct
-import cv2
+import threading
+import logging
+import multiprocessing
+
+from contextlib import contextmanager
 
 import lmdb
-import logging
-
-import multiprocessing
+import cv2
+import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 from tensorpack import imgaug
 from tensorpack.dataflow.image import MapDataComponent, AugmentImageComponent
@@ -91,7 +95,7 @@ class CocoMetadata:
         logging.debug('joint size=%d' % len(self.joint_list))
 
     def get_heatmap(self, target_size=None):
-        heatmap = np.zeros((CocoMetadata.__coco_parts + 1, self.height, self.width))
+        heatmap = np.zeros((CocoMetadata.__coco_parts, self.height, self.width))
 
         for joints in self.joint_list:
             for idx, point in enumerate(joints):
@@ -179,6 +183,9 @@ class CocoMetadata:
         max_y = min(height, int(max(center_from[1], center_to[1]) + threshold))
 
         norm = math.sqrt(vec_x ** 2 + vec_y ** 2)
+        if norm == 0:
+            return
+
         vec_x /= norm
         vec_y /= norm
 
@@ -202,7 +209,7 @@ class CocoPoseLMDB(RNGDataFlow):
     __max_key = 121745
 
     @staticmethod
-    def display_image(inp, heatmap, vectmap):
+    def display_image(inp, heatmap, vectmap, as_numpy=False):
         fig = plt.figure()
         a = fig.add_subplot(2, 2, 1)
         a.set_title('Image')
@@ -231,7 +238,13 @@ class CocoPoseLMDB(RNGDataFlow):
         plt.imshow(tmp2_even, cmap=plt.cm.gray, alpha=0.5)
         plt.colorbar()
 
-        plt.show()
+        if not as_numpy:
+            plt.show()
+        else:
+            fig.canvas.draw()
+            data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            return data
 
     @staticmethod
     def get_bgimg(inp, target_size=None):
@@ -272,8 +285,8 @@ class CocoPoseLMDB(RNGDataFlow):
             yield [meta]
 
 
-def get_dataflow(is_train):
-    ds = CocoPoseLMDB('/data/public/rw/coco-pose-estimation-lmdb/', is_train)
+def get_dataflow(path, is_train):
+    ds = CocoPoseLMDB(path, is_train)
     if is_train:
         ds = MapDataComponent(ds, pose_rotation)
         ds = MapDataComponent(ds, pose_flip)
@@ -296,24 +309,90 @@ def get_dataflow(is_train):
         ds = MapDataComponent(ds, pose_crop_center)
         ds = MapData(ds, pose_to_img)
 
-    return ds
-
-
-def get_dataflow_batch(is_train, batchsize):
-    ds = get_dataflow(is_train)
     ds = PrefetchData(ds, 1000, multiprocessing.cpu_count())
-    ds = BatchData(ds, batchsize)
-    ds = PrefetchData(ds, 10, 4)
 
     return ds
+
+
+def get_dataflow_batch(path, is_train, batchsize):
+    ds = get_dataflow(path, is_train)
+    ds = BatchData(ds, batchsize)
+    ds = PrefetchData(ds, 10, 2)
+
+    return ds
+
+
+class DataFlowToQueue(threading.Thread):
+    def __init__(self, ds, placeholders, queue_size=100):
+        super().__init__()
+        self.daemon = True
+
+        self.ds = ds
+        self.placeholders = placeholders
+        self.queue = tf.FIFOQueue(queue_size, [ph.dtype for ph in placeholders], shapes=[ph.get_shape() for ph in placeholders])
+        self.op = self.queue.enqueue(placeholders)
+        self.close_op = self.queue.close(cancel_pending_enqueues=True)
+
+        self._coord = None
+        self._sess = None
+
+    @contextmanager
+    def default_sess(self):
+        if self._sess:
+            with self._sess.as_default():
+                yield
+        else:
+            logging.warning("DataFlowToQueue {} wasn't under a default session!".format(self.name))
+            yield
+
+    def start(self):
+        self._sess = tf.get_default_session()
+        super().start()
+
+    def set_coordinator(self, coord):
+        self._coord = coord
+
+    def run(self):
+        with self.default_sess():
+            try:
+                while not self._coord.should_stop():
+                    try:
+                        self.ds.reset_state()
+                        while True:
+                            for dp in self.ds.get_data():
+                                feed = dict(zip(self.placeholders, dp))
+                                self.op.run(feed_dict=feed)
+                    except (tf.errors.CancelledError, tf.errors.OutOfRangeError, DataFlowTerminated):
+                        pass
+                    except Exception as e:
+                        if isinstance(e, RuntimeError) and 'closed Session' in str(e):
+                            pass
+                        else:
+                            logging.exception("Exception in {}:{}".format(self.name, str(e)))
+            except Exception as e:
+                logging.exception("Exception in {}:{}".format(self.name, str(e)))
+            finally:
+                try:
+                    self.close_op.run()
+                except Exception:
+                    pass
+                logging.info("{} Exited.".format(self.name))
+
+    def dequeue(self):
+        return self.queue.dequeue()
 
 
 if __name__ == '__main__':
-    df = get_dataflow(False)
+    df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', False)
+    df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
 
     df.reset_state()
-    for dp in df.get_data():
-        CocoPoseLMDB.display_image(dp[0], dp[1], dp[2])
+    t1 = time.time()
+    for idx, dp in enumerate(df.get_data()):
+        if idx % 100 == 0:
+            print(time.time() - t1)
+            t1 = time.time()
+            # CocoPoseLMDB.display_image(dp[0], dp[1], dp[2])
         pass
 
     logging.info('done')

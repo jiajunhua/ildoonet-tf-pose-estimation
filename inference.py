@@ -10,6 +10,7 @@ from tensorflow.python.client import timeline
 
 from network_cmu import CmuNetwork
 from common import estimate_pose, CocoPairsRender
+from network_dsconv import DSConvNetwork
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -22,17 +23,17 @@ config.gpu_options.allow_growth = True
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Tensorflow Openpose Inference')
     parser.add_argument('--imgpath', type=str, default='./images/person3.jpg')
-    parser.add_argument('--input-width', type=int, default=320)
-    parser.add_argument('--input-height', type=int, default=240)
+    parser.add_argument('--input-width', type=int, default=368)
+    parser.add_argument('--input-height', type=int, default=368)
     parser.add_argument('--stage-level', type=int, default=6)
-    parser.add_argument('--model', type=str, default='kakao', help='cmu(original) / kakao(faster version)')
+    parser.add_argument('--model', type=str, default='cmu', help='cmu / dsconv')
     args = parser.parse_args()
 
     input_node = tf.placeholder(tf.float32, shape=(None, args.input_height, args.input_width, 3), name='image')
 
     with tf.Session(config=config) as sess:
-        if args.model == 'kakao':
-            net = KakaoNetwork({'image': input_node}, trainable=False)
+        if args.model == 'dsconv':
+            net = DSConvNetwork({'image': input_node}, trainable=False)
             net.load('./models/numpy/fastopenpose_coco_v170729.npy', sess)
         elif args.model == 'cmu':
             net = CmuNetwork({'image': input_node}, trainable=False)

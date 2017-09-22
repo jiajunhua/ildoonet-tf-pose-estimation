@@ -6,13 +6,13 @@ Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
 **Features**
 
-[x] CMU's original network architecture and weights.
+- [x] CMU's original network architecture and weights.
 
-[] Post processing from network output.
+- [ ] Post processing from network output.
 
-[] Faster network variants using mobilenet, lcnn architecture.
+- [ ] Faster network variants using mobilenet, lcnn architecture.
 
-[] ROS Support. 
+- [ ] ROS Support. 
 
 ## Install
 

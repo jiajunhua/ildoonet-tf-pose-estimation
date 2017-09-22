@@ -42,7 +42,6 @@ class BaseNetwork(object):
         self.terminals = []
         # Mapping from layer names to layers
         self.layers = dict(inputs)
-        self.tensor_before_relu = dict()
         # If true, the resulting variables are set as trainable
         self.trainable = trainable
         # Switch variable for dropout
@@ -113,9 +112,7 @@ class BaseNetwork(object):
             return self.layers[name]
 
     def get_tensor(self, name):
-        if 'conv' not in name:
-            return self.get_output(name)
-        return self.tensor_before_relu[name]
+        return self.get_output(name)
 
     def get_unique_name(self, prefix):
         '''Returns an index-suffixed unique name for the given prefix.
@@ -133,41 +130,36 @@ class BaseNetwork(object):
         assert padding in ('SAME', 'VALID')
 
     @layer
-    def separable_conv(self, input, k_h, k_w, c_o, stride, name, relu=True, depth_multiplier=1.0):
+    def separable_conv(self, input, k_h, k_w, c_o, stride, name, relu=True, trainable=True):
         # with slim.arg_scope([slim.batch_norm], fused=True):
         # skip pointwise by setting num_outputs=None
         output = slim.separable_convolution2d(input,
                                               num_outputs=None,
                                               stride=stride,
                                               trainable=self.trainable,
-                                              depth_multiplier=depth_multiplier,
+                                              depth_multiplier=1.0,
                                               kernel_size=[k_h, k_w],
                                               activation_fn=None,
                                               # weights_initializer=tf.truncated_normal_initializer(stddev=0.0001),
                                               weights_initializer=slim.initializers.xavier_initializer(),
                                               biases_initializer=slim.init_ops.zeros_initializer(),
+                                              padding=DEFAULT_PADDING,
                                               # normalizer_fn=slim.batch_norm,
-                                              scope=name + '/dsc')
+                                              scope=name + '_depthwise')
 
-        # bn = slim.batch_norm(bn, scope=name + '/dw_batch_norm')
         output = slim.convolution2d(output,
                                     c_o,
                                     stride=1,
                                     kernel_size=[1, 1],
-                                    activation_fn=None,
+                                    activation_fn=tf.nn.relu if relu else None,
                                     # activation_fn=tf.nn.relu if relu else None,
                                     # weights_initializer=tf.truncated_normal_initializer(stddev=0.0001),
                                     weights_initializer=slim.initializers.xavier_initializer(),
                                     biases_initializer=slim.init_ops.zeros_initializer(),
-                                    # normalizer_fn=slim.batch_norm,
+                                    normalizer_fn=slim.batch_norm,
                                     trainable=self.trainable,
-                                    scope=name + '/pointwise_conv')
-        # output = slim.batch_norm(pointwise_conv, scope=name + '/pw_batch_norm')
+                                    scope=name + '_pointwise')
 
-        self.tensor_before_relu[name] = output
-
-        if relu:
-            output = tf.nn.relu(output, name=name + '/relu')
         return output
 
     @layer
@@ -210,7 +202,6 @@ class BaseNetwork(object):
                 biases = self.make_var('biases', [c_o], trainable=self.trainable & trainable)
                 output = tf.nn.bias_add(output, biases)
 
-            self.tensor_before_relu[name] = output
             if relu:
                 # ReLU non-linearity
                 output = tf.nn.relu(output, name=scope.name)
