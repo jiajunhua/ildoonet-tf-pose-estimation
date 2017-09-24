@@ -183,6 +183,6 @@ def _rotate_coord(shape, newxy, point, angle):
 
 
 def pose_to_img(meta_l):
-    return [meta_l[0].img,
+    return [meta_l[0].img - 128.0,
             meta_l[0].get_heatmap(target_size=(46, 46)),
             meta_l[0].get_vectormap(target_size=(46, 46))]
