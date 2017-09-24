@@ -11,6 +11,7 @@ from tensorflow.python.client import timeline
 from network_cmu import CmuNetwork
 from common import estimate_pose, CocoPairsRender
 from network_dsconv import DSConvNetwork
+from network_mobilenet import MobilenetNetwork
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--input-width', type=int, default=368)
     parser.add_argument('--input-height', type=int, default=368)
     parser.add_argument('--stage-level', type=int, default=6)
-    parser.add_argument('--model', type=str, default='cmu', help='cmu / dsconv')
+    parser.add_argument('--model', type=str, default='cmu', help='cmu / dsconv / mobilenet')
     args = parser.parse_args()
 
     input_node = tf.placeholder(tf.float32, shape=(None, args.input_height, args.input_width, 3), name='image')
@@ -35,9 +36,19 @@ if __name__ == '__main__':
         if args.model == 'dsconv':
             net = DSConvNetwork({'image': input_node}, trainable=False)
             net.load('./models/numpy/fastopenpose_coco_v170729.npy', sess)
+            last_layer = 'Mconv7_stage{stage}_L{aux}'
         elif args.model == 'cmu':
             net = CmuNetwork({'image': input_node}, trainable=False)
             net.load('./models/numpy/openpose_coco.npy', sess)
+            last_layer = 'Mconv7_stage{stage}_L{aux}'
+        elif args.model == 'mobilenet_1.0':
+            net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=1.0)
+            sess.run(tf.global_variables_initializer())     # TODO
+            last_layer = 'MConv_Stage{stage}_L{aux}_5'
+        elif args.model == 'mobilenet_0.50':
+            net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=0.50)
+            sess.run(tf.global_variables_initializer())     # TODO
+            last_layer = 'MConv_Stage{stage}_L{aux}_5'
         else:
             raise Exception('Invalid Mode.')
 
@@ -54,16 +65,16 @@ if __name__ == '__main__':
         a = time.time()
         pafMat, heatMat = sess.run(
             [
-                net.get_output(name='Mconv7_stage{}_L1'.format(args.stage_level)),
-                net.get_output(name='Mconv7_stage{}_L2'.format(args.stage_level))
+                net.get_output(name=last_layer.format(stage=args.stage_level, aux=1)),
+                net.get_output(name=last_layer.format(stage=args.stage_level, aux=2))
             ], feed_dict={'image:0': [image]}
         )
         logging.info('inference- elapsed_time={}'.format(time.time() - a))
         a = time.time()
         pafMat, heatMat = sess.run(
             [
-                net.get_output(name='Mconv7_stage{}_L1'.format(args.stage_level)),
-                net.get_output(name='Mconv7_stage{}_L2'.format(args.stage_level))
+                net.get_output(name=last_layer.format(stage=args.stage_level, aux=1)),
+                net.get_output(name=last_layer.format(stage=args.stage_level, aux=2))
             ], feed_dict={'image:0': [image]}
         )
         logging.info('inference- elapsed_time={}'.format(time.time() - a))
@@ -73,8 +84,8 @@ if __name__ == '__main__':
         run_metadata = tf.RunMetadata()
         pafMat, heatMat = sess.run(
             [
-                net.get_output(name='Mconv7_stage{}_L1'.format(args.stage_level)),
-                net.get_output(name='Mconv7_stage{}_L2'.format(args.stage_level))
+                net.get_output(name=last_layer.format(stage=args.stage_level, aux=1)),
+                net.get_output(name=last_layer.format(stage=args.stage_level, aux=2))
             ], feed_dict={'image:0': [image]}, options=run_options, run_metadata=run_metadata
         )
         logging.info('inference- elapsed_time={}'.format(time.time() - a))

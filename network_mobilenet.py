@@ -29,9 +29,8 @@ class MobilenetNetwork(network_base.BaseNetwork):
              # .separable_conv(3, 3, depth(1024), 1, name='Conv2d_13', trainable=self.trainable)
              )
 
+        feature_lv = 'Conv2d_11'
         with tf.variable_scope(None, 'Openpose'):
-            feature_lv = 'Conv2d_11'
-
             prefix = 'MConv_Stage1'
             (self.feed(feature_lv)
              .separable_conv(3, 3, depth(128), 1, name=prefix + '_L1_1', trainable=self.trainable)
@@ -66,6 +65,10 @@ class MobilenetNetwork(network_base.BaseNetwork):
                  .separable_conv(3, 3, depth(128), 1, name=prefix + '_L2_3', trainable=self.trainable)
                  .separable_conv(1, 1, depth(512), 1, name=prefix + '_L2_4', trainable=self.trainable)
                  .separable_conv(1, 1, 19, 1, relu=False, name=prefix + '_L2_5', trainable=self.trainable))
+
+            (self.feed('MConv_Stage6_L2_5',
+                       'MConv_Stage6_L1_5')
+             .concat(3, name='concat_stage7'))
 
     def loss_l1_l2(self):
         l1s = []

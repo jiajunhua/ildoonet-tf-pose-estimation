@@ -147,18 +147,19 @@ class BaseNetwork(object):
                                               # normalizer_fn=slim.batch_norm,
                                               scope=name + '_depthwise')
 
-        output = slim.convolution2d(output,
-                                    c_o,
-                                    stride=1,
-                                    kernel_size=[1, 1],
-                                    activation_fn=tf.nn.relu if relu else None,
-                                    # activation_fn=tf.nn.relu if relu else None,
-                                    # weights_initializer=tf.truncated_normal_initializer(stddev=0.0001),
-                                    weights_initializer=slim.initializers.xavier_initializer(),
-                                    biases_initializer=slim.init_ops.zeros_initializer(),
-                                    normalizer_fn=slim.batch_norm,
-                                    trainable=self.trainable,
-                                    scope=name + '_pointwise')
+        with slim.arg_scope([slim.batch_norm], fused=True):
+            output = slim.convolution2d(output,
+                                        c_o,
+                                        stride=1,
+                                        kernel_size=[1, 1],
+                                        activation_fn=tf.nn.relu if relu else None,
+                                        # activation_fn=tf.nn.relu if relu else None,
+                                        # weights_initializer=tf.truncated_normal_initializer(stddev=0.0001),
+                                        weights_initializer=slim.initializers.xavier_initializer(),
+                                        biases_initializer=slim.init_ops.zeros_initializer(),
+                                        normalizer_fn=slim.batch_norm,
+                                        trainable=self.trainable,
+                                        scope=name + '_pointwise')
 
         return output
 

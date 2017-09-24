@@ -16,8 +16,8 @@ if __name__ == '__main__':
     parser.add_argument('--model', default='mobilenet_1.0', help='model name')
     parser.add_argument('--datapath', type=str, default='/data/public/rw/coco-pose-estimation-lmdb/')
     parser.add_argument('--batchsize', type=int, default=10)
+    parser.add_argument('--lr', type=float, default=0.00004)
     parser.add_argument('--modelpath', type=str, default='/date/private/tf-openpose-mobilenet_1.0/')
-    parser.add_argument('--save', type=bool, default=False)
 
     args = parser.parse_args()
 
@@ -69,12 +69,12 @@ if __name__ == '__main__':
 
     # define optimizer
     global_step = tf.Variable(0, trainable=False)
-    starter_learning_rate = 0.0004
+    starter_learning_rate = args.lr
     momentum = 0.9
     max_epoch = 50
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                               decay_steps=100000, decay_rate=0.95, staircase=True)
-    optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=1e-10)
+                                               decay_steps=10000, decay_rate=0.80, staircase=True)
+    optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     train_op = optimizer.minimize(total_loss, global_step)
 
     # define summary
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         enqueuer.set_coordinator(coord)
         enqueuer.start()
 
-        file_writer = tf.summary.FileWriter('/date/private/tensorboard-openpose/', sess.graph)
+        file_writer = tf.summary.FileWriter('/data/private/tensorboard-openpose/', sess.graph)
 
         logging.info('Training Started.')
         time_started = time.time()
@@ -114,17 +114,17 @@ if __name__ == '__main__':
             if gs_num > step_per_epoch * max_epoch:
                 break
 
-            if gs_num - last_gs_num >= 1000:
+            if gs_num - last_gs_num >= 100:
                 train_loss, lr_val, summary = sess.run([total_loss, learning_rate, merged_summary_op])
 
                 # log of training loss / accuracy
                 batch_per_sec = gs_num / (time.time() - time_started)
-                logging.info('epoch=%.2f step=%d, %0.4f batchstep/sec lr=%f, loss=%g' % (gs_num / step_per_epoch, gs_num, batch_per_sec, lr_val, train_loss))
+                logging.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss))
                 last_gs_num = gs_num
 
                 file_writer.add_summary(summary, gs_num)
 
-            if gs_num - last_gs_num2 >= 5000:
+            if gs_num - last_gs_num2 >= 1000:
                 average_loss = 0
                 total_cnt = 0
                 df_valid.reset_state()

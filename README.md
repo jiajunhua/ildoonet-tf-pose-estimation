@@ -32,8 +32,8 @@ You need dependencies below.
 
 | Dataset | Model                             | Description                                                                     | Inference Time<br/>1 core cpu |
 |---------|--------------------------|------------------------------------------------------------------------------------------|---------------:|
-| Coco    | cmu                      | CMU's original version. Same network, same weights.                                      | 3.65s / img  |
-| Coco    | dsconv                   | Same as the cmu version except for the **depthwise separable convolution** of mobilenet. | 0.44s / img  |
+| Coco    | cmu                      | CMU's original version. Same network, same weights.                                      | 368x368 @ 10s<br/>3.65s / img  |
+| Coco    | dsconv                   | Same as the cmu version except for the **depthwise separable convolution** of mobilenet. | 368x368 @ <br/>0.44s / img  |
 | Coco    | mobilenet                | | | |
 | Coco    | lcnn      | | | |
 
