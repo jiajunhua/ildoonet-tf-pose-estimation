@@ -73,7 +73,7 @@ if __name__ == '__main__':
     momentum = 0.9
     max_epoch = 50
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                               decay_steps=10000, decay_rate=0.80, staircase=True)
+                                               decay_steps=10000, decay_rate=0.90, staircase=True)
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     train_op = optimizer.minimize(total_loss, global_step)
 
