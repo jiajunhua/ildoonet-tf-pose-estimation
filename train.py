@@ -43,13 +43,13 @@ if __name__ == '__main__':
     # define model
     if args.model == 'mobilenet_1.0':
         net = MobilenetNetwork({'image': q_inp}, conv_width=1.0)
-        pretrain_path = './models/pretrain/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
+        pretrain_path = './models/pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
     elif args.model == 'mobilenet_0.75':
         net = MobilenetNetwork({'image': q_inp}, conv_width=0.75)
-        pretrain_path = './models/pretrain/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
+        pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
     elif args.model == 'mobilenet_0.50':
         net = MobilenetNetwork({'image': q_inp}, conv_width=0.50)
-        pretrain_path = './models/pretrain/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
+        pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
     else:
         raise Exception('Invalid Mode.')
     output_vectmap = net.get_output('MConv_Stage6_L1_5')
