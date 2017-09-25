@@ -251,7 +251,7 @@ class CocoPoseLMDB(RNGDataFlow):
     def get_bgimg(inp, target_size=None):
         if target_size:
             inp = cv2.resize(inp, target_size, interpolation=cv2.INTER_AREA)
-        inp = cv2.cvtColor((inp + 128.0).astype(np.uint8), cv2.COLOR_BGR2RGB)
+        inp = cv2.cvtColor(((inp + 1.0) * (255.0 / 2.0)).astype(np.uint8), cv2.COLOR_BGR2RGB)
         return inp
 
     def __init__(self, path, is_train=True):
