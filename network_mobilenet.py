@@ -82,7 +82,7 @@ class MobilenetNetwork(network_base.BaseNetwork):
         return l1s, l2s
 
     def loss_last(self):
-        return self.get_output('MConv_Stage6_L1_5', 'MConv_Stage6_L2_5')
+        return self.get_output('MConv_Stage6_L1_5'), self.get_output('MConv_Stage6_L2_5')
 
     def restorable_variables(self):
         vs = {v.op.name: v for v in tf.global_variables() if
