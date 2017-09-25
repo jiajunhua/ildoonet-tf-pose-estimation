@@ -68,7 +68,10 @@ if __name__ == '__main__':
         losses.append(loss)
 
     total_loss = tf.reduce_mean(losses)
-    total_ll_loss = tf.reduce_mean([net.loss_last()[0] - q_vect, net.loss_last()[1] - q_heat])
+    total_ll_loss = tf.reduce_mean([
+        tf.nn.l2_loss(net.loss_last()[0] - q_vect),
+        tf.nn.l2_loss(net.loss_last()[1] - q_heat)
+    ])
 
     # define optimizer
     global_step = tf.Variable(0, trainable=False)
