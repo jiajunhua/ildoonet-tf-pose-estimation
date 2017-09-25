@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--batchsize', type=int, default=10)
     parser.add_argument('--lr', type=float, default=0.00004)
     parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-mobilenet_1.0/')
-
+    parser.add_argument('--checkpoint', type=str, default='')
     args = parser.parse_args()
 
     # define input placeholder
@@ -101,7 +101,11 @@ if __name__ == '__main__':
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
     with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
-        if pretrain_path:
+        if args.checkpoint:
+            logging.info('Restore from checkpoint...')
+            saver.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
+            logging.info('Restore from checkpoint...Done')
+        elif pretrain_path:
             logging.info('Restore pretrained weights...')
             if '.ckpt' in pretrain_path:
                 logging.info(net.restorable_variables().keys())
