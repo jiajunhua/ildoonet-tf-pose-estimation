@@ -140,3 +140,20 @@ class CmuNetwork(network_base.BaseNetwork):
         (self.feed('Mconv7_stage6_L2',
                    'Mconv7_stage6_L1')
              .concat(3, name='concat_stage7'))
+
+    def loss_l1_l2(self):
+         l1s = []
+         l2s = []
+         for layer_name in self.layers.keys():
+              if 'Mconv7' in layer_name and '_L1' in layer_name:
+                   l1s.append(self.layers[layer_name])
+              if 'Mconv7' in layer_name and '_L2' in layer_name:
+                   l2s.append(self.layers[layer_name])
+
+         return l1s, l2s
+
+    def loss_last(self):
+         return self.get_output('Mconv7_stage6_L1'), self.get_output('Mconv7_stage6_L2')
+
+    def restorable_variables(self):
+         return None

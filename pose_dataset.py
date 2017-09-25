@@ -20,6 +20,7 @@ from tensorpack.dataflow.prefetch import PrefetchData
 from tensorpack.dataflow.base import RNGDataFlow, DataFlowTerminated
 
 from datum_pb2 import Datum
+from network_cmu import CmuNetwork
 from pose_augment import pose_flip, pose_rotation, pose_to_img, pose_crop_random, \
     pose_resize_shortestedge_random, pose_resize_shortestedge_fixed, pose_crop_center
 
@@ -170,7 +171,7 @@ class CocoMetadata:
         return vectormap
 
     @staticmethod
-    def put_vectormap(vectormap, countmap, plane_idx, center_from, center_to, threshold=4):
+    def put_vectormap(vectormap, countmap, plane_idx, center_from, center_to, threshold=8):
         _, height, width = vectormap.shape[:3]
 
         vec_x = center_to[0] - center_from[0]
@@ -223,8 +224,8 @@ class CocoPoseLMDB(RNGDataFlow):
         plt.colorbar()
 
         tmp2 = vectmap.transpose((2, 0, 1))
-        tmp2_odd = np.amax(tmp2[::2, :, :], axis=0)
-        tmp2_even = np.amax(tmp2[1::2, :, :], axis=0)
+        tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
+        tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
 
         a = fig.add_subplot(2, 2, 3)
         a.set_title('Vectormap-x')
@@ -249,8 +250,8 @@ class CocoPoseLMDB(RNGDataFlow):
     @staticmethod
     def get_bgimg(inp, target_size=None):
         if target_size:
-            inp = cv2.resize(inp, target_size, interpolation = cv2.INTER_AREA)
-        inp = cv2.cvtColor(inp, cv2.COLOR_BGR2RGB)
+            inp = cv2.resize(inp, target_size, interpolation=cv2.INTER_AREA)
+        inp = cv2.cvtColor((inp + 128.0).astype(np.uint8), cv2.COLOR_BGR2RGB)
         return inp
 
     def __init__(self, path, is_train=True):
@@ -280,7 +281,7 @@ class CocoPoseLMDB(RNGDataFlow):
             data = np.fromstring(datum.data.tobytes(), dtype=np.uint8).reshape(datum.channels, datum.height, datum.width)
             img = data[:3].transpose((1, 2, 0))
 
-            meta = CocoMetadata(img, data[3], 4.0)
+            meta = CocoMetadata(img, data[3], 6.0)
 
             yield [meta]
 
@@ -384,15 +385,25 @@ class DataFlowToQueue(threading.Thread):
 
 if __name__ == '__main__':
     df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', False)
-    df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
+    # df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
 
-    df.reset_state()
-    t1 = time.time()
-    for idx, dp in enumerate(df.get_data()):
-        if idx % 100 == 0:
-            print(time.time() - t1)
-            t1 = time.time()
-            # CocoPoseLMDB.display_image(dp[0], dp[1], dp[2])
-        pass
+    input_node = tf.placeholder(tf.float32, shape=(None, 368, 368, 3), name='image')
+    with tf.Session() as sess:
+        net = CmuNetwork({'image': input_node}, trainable=False)
+        net.load('./models/numpy/openpose_coco.npy', sess)
+
+        df.reset_state()
+        t1 = time.time()
+        for idx, dp in enumerate(df.get_data()):
+            if idx % 100 == 0:
+                print(time.time() - t1)
+                t1 = time.time()
+                CocoPoseLMDB.display_image(dp[0], dp[1], dp[2])
+                print(dp[1].shape, dp[2].shape)
+
+                pafMat, heatMat = sess.run(net.loss_last(), feed_dict={'image:0': [dp[0] / 128.0]})
+                print(heatMat.shape, pafMat.shape)
+                CocoPoseLMDB.display_image(dp[0], heatMat[0], pafMat[0])
+            pass
 
     logging.info('done')

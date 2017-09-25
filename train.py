@@ -6,6 +6,7 @@ import time
 import datetime
 import tensorflow as tf
 
+from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
 from pose_dataset import get_dataflow_batch, DataFlowToQueue
 
@@ -18,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--datapath', type=str, default='/data/public/rw/coco-pose-estimation-lmdb/')
     parser.add_argument('--batchsize', type=int, default=10)
     parser.add_argument('--lr', type=float, default=0.00004)
-    parser.add_argument('--modelpath', type=str, default='/date/private/tf-openpose-mobilenet_1.0/')
+    parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-mobilenet_1.0/')
 
     args = parser.parse_args()
 
@@ -27,7 +28,7 @@ if __name__ == '__main__':
     input_node = tf.placeholder(tf.float32, shape=(args.batchsize, input_wh, input_wh, 3), name='image')
 
     # define output placeholder
-    if args.model in ['mobilenet_1.0', 'mobilenet_0.75', 'mobilenet_0.50']:
+    if args.model in ['mobilenet_1.0', 'mobilenet_0.75', 'mobilenet_0.50', 'cmu']:
         output_size = 46
     else:
         raise Exception('Invalid Mode.')
@@ -51,10 +52,12 @@ if __name__ == '__main__':
     elif args.model == 'mobilenet_0.50':
         net = MobilenetNetwork({'image': q_inp}, conv_width=0.50)
         pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
+    elif args.model == 'cmu':
+        net = CmuNetwork({'image': q_inp})
+        pretrain_path = './models/numpy/openpose_coco.npy'
     else:
         raise Exception('Invalid Mode.')
-    output_vectmap = net.get_output('MConv_Stage6_L1_5')
-    output_heatmap = net.get_output('MConv_Stage6_L2_5')
+    output_vectmap, output_heatmap = net.loss_last()
 
     # define loss
     l1s, l2s = net.loss_l1_l2()
@@ -69,8 +72,8 @@ if __name__ == '__main__':
 
     total_loss = tf.reduce_mean(losses)
     total_ll_loss = tf.reduce_mean([
-        tf.nn.l2_loss(net.loss_last()[0] - q_vect),
-        tf.nn.l2_loss(net.loss_last()[1] - q_heat)
+        tf.nn.l2_loss(output_vectmap - q_vect),
+        tf.nn.l2_loss(output_heatmap - q_heat)
     ])
 
     # define optimizer
@@ -100,9 +103,12 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         if pretrain_path:
             logging.info('Restore pretrained weights...')
-            logging.info(net.restorable_variables().keys())
-            loader = tf.train.Saver(net.restorable_variables())
-            loader.restore(sess, pretrain_path)
+            if '.ckpt' in pretrain_path:
+                logging.info(net.restorable_variables().keys())
+                loader = tf.train.Saver(net.restorable_variables())
+                loader.restore(sess, pretrain_path)
+            elif '.npy' in pretrain_path:
+                net.load(pretrain_path, sess, False)
             logging.info('Restore pretrained weights...Done')
 
         coord = tf.train.Coordinator()
@@ -120,14 +126,14 @@ if __name__ == '__main__':
         logging.info('Training Started.')
         time_started = time.time()
         last_gs_num = last_gs_num2 = 0
-        step_per_epoch = 120000 / args.batchsize
+        step_per_epoch = 121745 // args.batchsize
         while True:
             _, gs_num = sess.run([train_op, global_step])
 
             if gs_num > step_per_epoch * max_epoch:
                 break
 
-            if gs_num - last_gs_num >= 100:
+            if gs_num == 1 or gs_num - last_gs_num >= 100:
                 train_loss, train_loss_ll, lr_val, summary = sess.run([total_loss, total_ll_loss, learning_rate, merged_summary_op])
 
                 # log of training loss / accuracy
@@ -137,7 +143,7 @@ if __name__ == '__main__':
 
                 file_writer.add_summary(summary, gs_num)
 
-            if gs_num - last_gs_num2 >= 1000:
+            if gs_num == 1 or gs_num - last_gs_num2 >= 1000:
                 average_loss = average_loss_ll = 0
                 total_cnt = 0
                 df_valid.reset_state()
