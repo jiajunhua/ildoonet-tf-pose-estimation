@@ -3,6 +3,7 @@ import logging
 import os
 import time
 
+import datetime
 import tensorflow as tf
 
 from network_mobilenet import MobilenetNetwork
@@ -65,7 +66,9 @@ if __name__ == '__main__':
     for l2 in l2s:
         loss = tf.nn.l2_loss(l2 - q_heat, name='loss_' + l2.name.replace(':0', ''))
         losses.append(loss)
+
     total_loss = tf.reduce_mean(losses)
+    total_ll_loss = tf.reduce_mean([net.loss_last()[0] - q_vect, net.loss_last()[1] - q_heat])
 
     # define optimizer
     global_step = tf.Variable(0, trainable=False)
@@ -85,6 +88,7 @@ if __name__ == '__main__':
     # tf.summary.image('validation ground truth', sample_valid_gt, 1)
     # tf.summary.image('validation prediction', sample_valid_predict, 1)
     tf.summary.scalar("loss", total_loss)
+    tf.summary.scalar("loss_lastlayer", total_ll_loss)
     merged_summary_op = tf.summary.merge_all()
 
     saver = tf.train.Saver()
@@ -102,7 +106,13 @@ if __name__ == '__main__':
         enqueuer.set_coordinator(coord)
         enqueuer.start()
 
-        file_writer = tf.summary.FileWriter('/data/private/tensorboard-openpose/', sess.graph)
+        training_name = '{}_{}_batch:{}_lr:{}'.format(
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            args.model,
+            args.batchsize,
+            args.lr
+        )
+        file_writer = tf.summary.FileWriter('/data/private/tensorboard-openpose/{}/'.format(training_name), sess.graph)
 
         logging.info('Training Started.')
         time_started = time.time()
@@ -115,17 +125,17 @@ if __name__ == '__main__':
                 break
 
             if gs_num - last_gs_num >= 100:
-                train_loss, lr_val, summary = sess.run([total_loss, learning_rate, merged_summary_op])
+                train_loss, train_loss_ll, lr_val, summary = sess.run([total_loss, total_ll_loss, learning_rate, merged_summary_op])
 
                 # log of training loss / accuracy
                 batch_per_sec = gs_num / (time.time() - time_started)
-                logging.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss))
+                logging.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss, train_loss_ll))
                 last_gs_num = gs_num
 
                 file_writer.add_summary(summary, gs_num)
 
             if gs_num - last_gs_num2 >= 1000:
-                average_loss = 0
+                average_loss = average_loss_ll = 0
                 total_cnt = 0
                 df_valid.reset_state()
                 gen_val = df_valid.get_data()
@@ -136,17 +146,19 @@ if __name__ == '__main__':
                     except StopIteration:
                         break
 
-                    lss, vectmap_sample, heatmap_sample = sess.run(
-                        [total_loss, output_vectmap, output_heatmap],
+                    lss, lss_ll, vectmap_sample, heatmap_sample = sess.run(
+                        [total_loss, total_ll_loss, output_vectmap, output_heatmap],
                         feed_dict={input_node: images_test, vectmap_node: vectmaps, heatmap_node: heatmaps}
                     )
                     average_loss += lss * len(images_test)
+                    average_loss_ll += lss_ll * len(images_test)
                     total_cnt += len(images_test)
 
-                logging.info('validation(%d) loss=%f' % (total_cnt, average_loss / total_cnt))
+                logging.info('validation(%d) loss=%f, loss_ll=%f' % (total_cnt, average_loss / total_cnt, average_loss_ll / total_cnt))
                 last_gs_num2 = gs_num
 
             if gs_num > 0 and gs_num % 10000 == 0:
                 saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
 
+        saver.save(sess, os.path.join(args.modelpath, 'model_final'), global_step=global_step)
     logging.info('optimization finished. %f' % (time.time() - time_started))
