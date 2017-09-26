@@ -9,9 +9,10 @@ import tensorflow as tf
 from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
 from pose_dataset import get_dataflow_batch, DataFlowToQueue
-
+from tensorpack.dataflow.remote import send_dataflow_zmq, RemoteDataZMQ
 
 logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(levelname)s %(message)s')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training codes for Openpose using Tensorflow')
@@ -21,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.00004)
     parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-mobilenet_1.0/')
     parser.add_argument('--checkpoint', type=str, default='')
+    parser.add_argument('--remote-data', type=bool, default=False)
     args = parser.parse_args()
 
     # define input placeholder
@@ -37,7 +39,10 @@ if __name__ == '__main__':
     heatmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_size, output_size, 19), name='heatmap')
 
     # prepare data
-    df = get_dataflow_batch(args.datapath, True, args.batchsize)
+    if not args.remote_data:
+        df = get_dataflow_batch(args.datapath, True, args.batchsize)
+    else:
+        df = RemoteDataZMQ('ipc:///tmp/ipc-socket', 'tcp://0.0.0.0:1029')
     df_valid = get_dataflow_batch(args.datapath, False, args.batchsize)
     enqueuer = DataFlowToQueue(df, [input_node, heatmap_node, vectmap_node], queue_size=100)
     q_inp, q_heat, q_vect = enqueuer.dequeue()
