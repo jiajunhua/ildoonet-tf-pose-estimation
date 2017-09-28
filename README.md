@@ -8,9 +8,29 @@ Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
 - [x] CMU's original network architecture and weights.
 
+  - [x] Transfer Original Weights to Tensorflow
+
+  - [x] Training Code with multi-gpus
+
 - [ ] Post processing from network output.
 
+  - [ ] Accurate Result
+  
+  - [ ] Fast Computation
+
 - [ ] Faster network variants using mobilenet, lcnn architecture.
+
+  - [x] Depthwise Separable Convolution Version
+  
+  - [ ] Mobilenet Version
+  
+  - [ ] LCNN Version
+
+- [ ] Demos
+
+  - [ ] Realtime Webcam Demo
+  
+  - [ ] Image/Video File Demo
 
 - [ ] ROS Support. 
 
@@ -24,7 +44,7 @@ You need dependencies below.
 
 - tensorflow 1.3
 
-- opencv 3
+- opencv3
 
 - protobuf
 
@@ -47,9 +67,9 @@ $ pip3 install -r requirements.txt
 |---------|--------------------------|------------------------------------------------------------------------------------------|---------------:|
 | Coco    | cmu                      | CMU's original version. Same network, same weights.                                      | 368x368 @ 10s<br/>320x240 @ 3.65s |
 | Coco    | dsconv                   | Same architecture as the cmu version except for<br/>the **depthwise separable convolution** of mobilenet. | 368x368 @ 1.1s<br/>320x240 @ 0.44s  |
-| Coco    | mobilenet                | Feature extraction layers is replaced from VGG to Mobilenet from Google                  | | |
-| Coco    | lcnn      | | | |
+| Coco    | mobilenet                | Feature extraction layers is replaced from VGG to **Mobilenet** from Google                  | | |
 
+* Test being processed. This will be updated soon.
 
 ## Training
 
@@ -61,8 +81,42 @@ CMU Perceptual Computing Lab has modified Caffe to provide data augmentation. Se
 
 I implemented the augmentation codes as the way of the original version, See [pose_dataset.py](pose_dataset.py) and [pose_augment.py](pose_augment.py). This includes scaling, rotation, flip, cropping.
 
+This process can be a bottleneck for training, so if you have enough computing resources, please see [Run for Faster Training]() Section
+
 ### Run
 
+```
+$ python3 train.py --model=cmu --datapath={datapath} --batchsize=64 --lr=0.001 --modelpath={path-to-save}
+
+2017-09-27 15:58:50,307 INFO Restore pretrained weights...
+```
+
+### Run for Faster Training
+
+If you have enough computing resources in multiple nodes, you can launch multiple workers on nodes to help data preparation.
+ 
+```
+worker-node1$ python3 pose_dataworker.py --master=tcp://host:port
+worker-node2$ python3 pose_dataworker.py --master=tcp://host:port
+worker-node3$ python3 pose_dataworker.py --master=tcp://host:port
+...
+```
+
+After above preparation, you can launch training script with special arguments.
+
+```
+$ python3 train.py --remote-data=tcp://0.0.0.0:port
+
+2017-09-27 15:58:50,307 INFO Restore pretrained weights...
+```
+
+Also, You can quickly train with multiple gpus. This automatically splits batch into multiple gpus for forward/backward computations.
+
+```
+$ python3 train.py --remote-data=tcp://0.0.0.0:port --gpus=8
+
+2017-09-27 15:58:50,307 INFO Restore pretrained weights...
+```
 
 ## References
 

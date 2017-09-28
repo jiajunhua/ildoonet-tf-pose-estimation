@@ -19,22 +19,21 @@ if __name__ == '__main__':
     parser.add_argument('--model', default='mobilenet_1.0', help='model name')
     parser.add_argument('--datapath', type=str, default='/data/public/rw/coco-pose-estimation-lmdb/')
     parser.add_argument('--batchsize', type=int, default=10)
-    parser.add_argument('--lr', type=float, default=0.00004)
+    parser.add_argument('--gpus', type=int, default=1)
+    parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-mobilenet_1.0/')
     parser.add_argument('--checkpoint', type=str, default='')
-    parser.add_argument('--remote-data', type=bool, default=False)
+    parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
     args = parser.parse_args()
+
+    if args.gpus <= 0:
+        raise Exception('gpus <= 0')
 
     # define input placeholder
     input_wh = 368
+    output_size = input_wh // 8
+
     input_node = tf.placeholder(tf.float32, shape=(args.batchsize, input_wh, input_wh, 3), name='image')
-
-    # define output placeholder
-    if args.model in ['mobilenet_1.0', 'mobilenet_0.75', 'mobilenet_0.50', 'cmu']:
-        output_size = 46
-    else:
-        raise Exception('Invalid Mode.')
-
     vectmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_size, output_size, 38), name='vectmap')
     heatmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_size, output_size, 19), name='heatmap')
 
@@ -42,39 +41,65 @@ if __name__ == '__main__':
     if not args.remote_data:
         df = get_dataflow_batch(args.datapath, True, args.batchsize)
     else:
-        df = RemoteDataZMQ('ipc:///tmp/ipc-socket', 'tcp://0.0.0.0:1029')
-    df_valid = get_dataflow_batch(args.datapath, False, args.batchsize)
+        df = RemoteDataZMQ(args.remote_data)
     enqueuer = DataFlowToQueue(df, [input_node, heatmap_node, vectmap_node], queue_size=100)
     q_inp, q_heat, q_vect = enqueuer.dequeue()
 
-    # define model
-    if args.model == 'mobilenet_1.0':
-        net = MobilenetNetwork({'image': q_inp}, conv_width=1.0)
-        pretrain_path = './models/pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
-    elif args.model == 'mobilenet_0.75':
-        net = MobilenetNetwork({'image': q_inp}, conv_width=0.75)
-        pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
-    elif args.model == 'mobilenet_0.50':
-        net = MobilenetNetwork({'image': q_inp}, conv_width=0.50)
-        pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
-    elif args.model == 'cmu':
-        net = CmuNetwork({'image': q_inp})
-        pretrain_path = './models/numpy/openpose_coco.npy'
-    else:
-        raise Exception('Invalid Mode.')
-    output_vectmap, output_heatmap = net.loss_last()
+    df_valid = get_dataflow_batch(args.datapath, False, args.batchsize)
+    df_valid.reset_state()
+    validation_cache = []
+    for images_test, heatmaps, vectmaps in df_valid.get_data():
+        validation_cache.append((images_test, heatmaps, vectmaps))
+
+    # define model for multi-gpu
+    q_inp_split = tf.split(q_inp, args.gpus)
+    output_vectmap = []
+    output_heatmap = []
+    vectmap_losses = []
+    heatmap_losses = []
+    for gpu_id in range(args.gpus):
+        with tf.device(tf.DeviceSpec(device_type="GPU", device_index=gpu_id)):
+            with tf.variable_scope(tf.get_variable_scope(), reuse=(gpu_id > 0)):
+                if args.model == 'mobilenet_1.0':
+                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=1.0)
+                    pretrain_path = './models/pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
+                elif args.model == 'mobilenet_0.75':
+                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.75)
+                    pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
+                elif args.model == 'mobilenet_0.50':
+                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.50)
+                    pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
+                elif args.model == 'cmu':
+                    net = CmuNetwork({'image': q_inp_split[gpu_id]})
+                    pretrain_path = './models/numpy/openpose_coco.npy'
+                else:
+                    raise Exception('Invalid Mode.')
+                vect, heat = net.loss_last()
+                output_vectmap.append(vect)
+                output_heatmap.append(heat)
+
+                l1s, l2s = net.loss_l1_l2()
+
+                for idx, (l1, l2) in enumerate(zip(l1s, l2s)):
+                    if gpu_id == 0:
+                        vectmap_losses.append([])
+                        heatmap_losses.append([])
+                    vectmap_losses[idx].append(l1)
+                    heatmap_losses[idx].append(l2)
 
     # define loss
-    l1s, l2s = net.loss_l1_l2()
     losses = []
-    logging.info('loss # = %d %d' % (len(l1s), len(l2s)))
-    for l1 in l1s:
-        loss = tf.nn.l2_loss(l1 - q_vect, name='loss_' + l1.name.replace(':0', ''))
+    for l1_idx, l1 in enumerate(vectmap_losses):
+        l1_concat = tf.concat(l1, axis=0)
+        loss = tf.nn.l2_loss(l1_concat - q_vect, name='loss_l1_stage%d' % l1_idx)
         losses.append(loss)
-    for l2 in l2s:
-        loss = tf.nn.l2_loss(l2 - q_heat, name='loss_' + l2.name.replace(':0', ''))
+    for l2_idx, l2 in enumerate(heatmap_losses):
+        l2_concat = tf.concat(l2, axis=0)
+        loss = tf.nn.l2_loss(l2_concat - q_heat, name='loss_l2_stage%d' % l2_idx)
         losses.append(loss)
 
+    output_vectmap = tf.concat(output_vectmap, axis=0)
+    output_heatmap = tf.concat(output_heatmap, axis=0)
     total_loss = tf.reduce_mean(losses)
     total_ll_loss = tf.reduce_mean([
         tf.nn.l2_loss(output_vectmap - q_vect),
@@ -87,9 +112,9 @@ if __name__ == '__main__':
     momentum = 0.9
     max_epoch = 50
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                               decay_steps=10000, decay_rate=0.90, staircase=True)
+                                               decay_steps=6000, decay_rate=0.80, staircase=True)
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
-    train_op = optimizer.minimize(total_loss, global_step)
+    train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
 
     # define summary
     sample_train = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
@@ -120,17 +145,20 @@ if __name__ == '__main__':
                 net.load(pretrain_path, sess, False)
             logging.info('Restore pretrained weights...Done')
 
+        logging.info('prepare file writer')
+        training_name = '{}_{}_batch:{}_lr:{}_gpus:{}'.format(
+            datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
+            args.model,
+            args.batchsize,
+            args.lr,
+            args.gpus
+        )
+        file_writer = tf.summary.FileWriter('/root/tensorboard-openpose/{}/'.format(training_name), sess.graph)
+
+        logging.info('prepare coordinator')
         coord = tf.train.Coordinator()
         enqueuer.set_coordinator(coord)
         enqueuer.start()
-
-        training_name = '{}_{}_batch:{}_lr:{}'.format(
-            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            args.model,
-            args.batchsize,
-            args.lr
-        )
-        file_writer = tf.summary.FileWriter('/data/private/tensorboard-openpose/{}/'.format(training_name), sess.graph)
 
         logging.info('Training Started.')
         time_started = time.time()
@@ -155,15 +183,9 @@ if __name__ == '__main__':
             if gs_num == 1 or gs_num - last_gs_num2 >= 1000:
                 average_loss = average_loss_ll = 0
                 total_cnt = 0
-                df_valid.reset_state()
-                gen_val = df_valid.get_data()
-                while True:
-                    # log of test accuracy
-                    try:
-                        images_test, heatmaps, vectmaps = next(gen_val)
-                    except StopIteration:
-                        break
 
+                # log of test accuracy
+                for images_test, heatmaps, vectmaps in validation_cache:
                     lss, lss_ll, vectmap_sample, heatmap_sample = sess.run(
                         [total_loss, total_ll_loss, output_vectmap, output_heatmap],
                         feed_dict={input_node: images_test, vectmap_node: vectmaps, heatmap_node: heatmaps}

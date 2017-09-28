@@ -8,10 +8,11 @@ from contextlib import contextmanager
 
 import lmdb
 import cv2
-import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+
+import tensorflow as tf
 
 from tensorpack import imgaug
 from tensorpack.dataflow.image import MapDataComponent, AugmentImageComponent
@@ -278,7 +279,11 @@ class CocoPoseLMDB(RNGDataFlow):
             datum = Datum()
             s = self.txn.get(('%07d' % idx).encode('utf-8'))
             datum.ParseFromString(s)
-            data = np.fromstring(datum.data.tobytes(), dtype=np.uint8).reshape(datum.channels, datum.height, datum.width)
+            if isinstance(datum.data, bytes):
+                data = np.fromstring(datum.data, dtype=np.uint8).reshape(datum.channels, datum.height, datum.width)
+            else:
+                data = np.fromstring(datum.data.tobytes(), dtype=np.uint8).reshape(datum.channels, datum.height,
+                                                                                   datum.width)
             img = data[:3].transpose((1, 2, 0))
 
             meta = CocoMetadata(img, data[3], 6.0)
@@ -287,7 +292,7 @@ class CocoPoseLMDB(RNGDataFlow):
 
 
 def get_dataflow(path, is_train):
-    ds = CocoPoseLMDB(path, is_train)
+    ds = CocoPoseLMDB(path, is_train)       # read data from lmdb
     if is_train:
         ds = MapDataComponent(ds, pose_rotation)
         ds = MapDataComponent(ds, pose_flip)
@@ -324,7 +329,7 @@ def get_dataflow_batch(path, is_train, batchsize):
 
 
 class DataFlowToQueue(threading.Thread):
-    def __init__(self, ds, placeholders, queue_size=100):
+    def __init__(self, ds, placeholders, queue_size=10):
         super().__init__()
         self.daemon = True
 
@@ -364,8 +369,10 @@ class DataFlowToQueue(threading.Thread):
                                 feed = dict(zip(self.placeholders, dp))
                                 self.op.run(feed_dict=feed)
                     except (tf.errors.CancelledError, tf.errors.OutOfRangeError, DataFlowTerminated):
+                        logging.error('err type1')
                         pass
                     except Exception as e:
+                        logging.error('err type2, {}'.format(str(e)))
                         if isinstance(e, RuntimeError) and 'closed Session' in str(e):
                             pass
                         else:
@@ -387,10 +394,10 @@ if __name__ == '__main__':
     df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', False)
     # df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
 
-    input_node = tf.placeholder(tf.float32, shape=(None, 368, 368, 3), name='image')
+    # input_node = tf.placeholder(tf.float32, shape=(None, 368, 368, 3), name='image')
     with tf.Session() as sess:
-        net = CmuNetwork({'image': input_node}, trainable=False)
-        net.load('./models/numpy/openpose_coco.npy', sess)
+        # net = CmuNetwork({'image': input_node}, trainable=False)
+        # net.load('./models/numpy/openpose_coco.npy', sess)
 
         df.reset_state()
         t1 = time.time()
@@ -401,9 +408,9 @@ if __name__ == '__main__':
                 CocoPoseLMDB.display_image(dp[0], dp[1], dp[2])
                 print(dp[1].shape, dp[2].shape)
 
-                pafMat, heatMat = sess.run(net.loss_last(), feed_dict={'image:0': [dp[0] / 128.0]})
-                print(heatMat.shape, pafMat.shape)
-                CocoPoseLMDB.display_image(dp[0], heatMat[0], pafMat[0])
+                # pafMat, heatMat = sess.run(net.loss_last(), feed_dict={'image:0': [dp[0] / 128.0]})
+                # print(heatMat.shape, pafMat.shape)
+                # CocoPoseLMDB.display_image(dp[0], heatMat[0], pafMat[0])
             pass
 
     logging.info('done')

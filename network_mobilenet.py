@@ -73,7 +73,7 @@ class MobilenetNetwork(network_base.BaseNetwork):
     def loss_l1_l2(self):
         l1s = []
         l2s = []
-        for layer_name in self.layers.keys():
+        for layer_name in sorted(self.layers.keys()):
             if '_L1_5' in layer_name:
                 l1s.append(self.layers[layer_name])
             if '_L2_5' in layer_name:
