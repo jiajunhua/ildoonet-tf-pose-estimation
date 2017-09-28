@@ -118,6 +118,8 @@ $ python3 train.py --remote-data=tcp://0.0.0.0:port --gpus=8
 2017-09-27 15:58:50,307 INFO Restore pretrained weights...
 ```
 
+I trained models within a day with 8 gpus and multiple preprocessing nodes with 48 core cpus.
+
 ## References
 
 ### OpenPose
