@@ -41,7 +41,7 @@ if __name__ == '__main__':
     if not args.remote_data:
         df = get_dataflow_batch(args.datapath, True, args.batchsize)
     else:
-        df = RemoteDataZMQ(args.remote_data)
+        df = RemoteDataZMQ(args.remote_data, hwm=10)
     enqueuer = DataFlowToQueue(df, [input_node, heatmap_node, vectmap_node], queue_size=100)
     q_inp, q_heat, q_vect = enqueuer.dequeue()
 
