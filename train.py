@@ -36,8 +36,8 @@ if __name__ == '__main__':
 
     # define input placeholder
     set_network_input_wh(args.input_width, args.input_height)
-    output_w = args.input_w // 8
-    output_h = args.input_h // 8
+    output_w = args.input_width // 8
+    output_h = args.input_height // 8
 
     input_node = tf.placeholder(tf.float32, shape=(args.batchsize, args.input_height, args.input_width, 3), name='image')
     vectmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 38), name='vectmap')
