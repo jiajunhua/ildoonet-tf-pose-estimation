@@ -9,16 +9,26 @@ from tensorpack.dataflow.imgaug.geometry import RotationAndCropValid
 from common import CocoPart
 
 
+_network_w = 368
+_network_h = 368
+
+
+def set_network_input_wh(w, h):
+    global _network_w, _network_h
+    _network_w, _network_h = w, h
+
+
 def pose_resize_shortestedge_fixed(meta):
-    return pose_resize_shortestedge(meta, 368)
+    return pose_resize_shortestedge(meta, max(_network_w, _network_h))
 
 
 def pose_resize_shortestedge_random(meta):
-    target_size = int(400 * random.uniform(0.5, 1.1))
+    target_size = int(max(_network_w, _network_h) * random.uniform(0.5, 1.1))
     return pose_resize_shortestedge(meta, target_size)
 
 
 def pose_resize_shortestedge(meta, target_size):
+    global _network_w, _network_h
     img = meta.img
 
     # adjust image
@@ -31,9 +41,9 @@ def pose_resize_shortestedge(meta, target_size):
     dst = cv2.resize(img, (neww, newh), interpolation=cv2.INTER_AREA)
 
     pw = ph = 0
-    if neww < 370 or newh < 370:
-        pw = max(0, (370 - neww) // 2)
-        ph = max(0, (370 - newh) // 2)
+    if neww < _network_w or newh < _network_h:
+        pw = max(0, (_network_w - neww) // 2)
+        ph = max(0, (_network_h - newh) // 2)
         dst = cv2.copyMakeBorder(dst, ph, ph, pw, pw, cv2.BORDER_CONSTANT, value=(255, 255, 255))
 
     # adjust meta data
@@ -54,7 +64,8 @@ def pose_resize_shortestedge(meta, target_size):
 
 
 def pose_crop_center(meta):
-    target_size = (368, 368)
+    global _network_w, _network_h
+    target_size = (_network_w, _network_h)
     x = (meta.width - target_size[0]) // 2 if meta.width > target_size[0] else 0
     y = (meta.height - target_size[1]) // 2 if meta.height > target_size[1] else 0
 
@@ -62,7 +73,8 @@ def pose_crop_center(meta):
 
 
 def pose_crop_random(meta):
-    target_size = (368, 368)
+    global _network_w, _network_h
+    target_size = (_network_w, _network_h)
     x = random.randrange(0, meta.width - target_size[0]) if meta.width > target_size[0] else 0
     y = random.randrange(0, meta.height - target_size[1]) if meta.height > target_size[1] else 0
 
@@ -183,6 +195,7 @@ def _rotate_coord(shape, newxy, point, angle):
 
 
 def pose_to_img(meta_l):
+    global _network_w, _network_h
     return [(2.0 / 255.0) * meta_l[0].img - 1.0,
-            meta_l[0].get_heatmap(target_size=(46, 46)),
-            meta_l[0].get_vectormap(target_size=(46, 46))]
+            meta_l[0].get_heatmap(target_size=(_network_w // 8, _network_h // 8)),
+            meta_l[0].get_vectormap(target_size=(_network_w // 8, _network_h // 8))]

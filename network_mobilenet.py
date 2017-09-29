@@ -36,14 +36,14 @@ class MobilenetNetwork(network_base.BaseNetwork):
              .separable_conv(3, 3, depth(128), 1, name=prefix + '_L1_1', trainable=self.trainable)
              .separable_conv(3, 3, depth(128), 1, name=prefix + '_L1_2', trainable=self.trainable)
              .separable_conv(3, 3, depth(128), 1, name=prefix + '_L1_3', trainable=self.trainable)
-             .separable_conv(1, 1, depth(512), 1, name=prefix + '_L1_4', trainable=self.trainable)
+             .separable_conv(1, 1, depth(256), 1, name=prefix + '_L1_4', trainable=self.trainable)
              .separable_conv(1, 1, 38, 1, relu=False, name=prefix + '_L1_5', trainable=self.trainable))
 
             (self.feed(feature_lv)
              .separable_conv(3, 3, depth(128), 1, name=prefix + '_L2_1', trainable=self.trainable)
              .separable_conv(3, 3, depth(128), 1, name=prefix + '_L2_2', trainable=self.trainable)
              .separable_conv(3, 3, depth(128), 1, name=prefix + '_L2_3', trainable=self.trainable)
-             .separable_conv(1, 1, depth(512), 1, name=prefix + '_L2_4', trainable=self.trainable)
+             .separable_conv(1, 1, depth(256), 1, name=prefix + '_L2_4', trainable=self.trainable)
              .separable_conv(1, 1, 19, 1, relu=False, name=prefix + '_L2_5', trainable=self.trainable))
 
             for stage_id in range(5):
@@ -56,14 +56,14 @@ class MobilenetNetwork(network_base.BaseNetwork):
                  .separable_conv(3, 3, depth(128), 1, name=prefix + '_L1_1', trainable=self.trainable)
                  .separable_conv(3, 3, depth(128), 1, name=prefix + '_L1_2', trainable=self.trainable)
                  .separable_conv(3, 3, depth(128), 1, name=prefix + '_L1_3', trainable=self.trainable)
-                 .separable_conv(1, 1, depth(512), 1, name=prefix + '_L1_4', trainable=self.trainable)
+                 .separable_conv(1, 1, depth(256), 1, name=prefix + '_L1_4', trainable=self.trainable)
                  .separable_conv(1, 1, 38, 1, relu=False, name=prefix + '_L1_5', trainable=self.trainable))
 
                 (self.feed(prefix + '_concat')
                  .separable_conv(3, 3, depth(128), 1, name=prefix + '_L2_1', trainable=self.trainable)
                  .separable_conv(3, 3, depth(128), 1, name=prefix + '_L2_2', trainable=self.trainable)
                  .separable_conv(3, 3, depth(128), 1, name=prefix + '_L2_3', trainable=self.trainable)
-                 .separable_conv(1, 1, depth(512), 1, name=prefix + '_L2_4', trainable=self.trainable)
+                 .separable_conv(1, 1, depth(256), 1, name=prefix + '_L2_4', trainable=self.trainable)
                  .separable_conv(1, 1, 19, 1, relu=False, name=prefix + '_L2_5', trainable=self.trainable))
 
             (self.feed('MConv_Stage6_L2_5',

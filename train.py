@@ -8,6 +8,7 @@ import tensorflow as tf
 
 from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
+from pose_augment import set_network_input_wh
 from pose_dataset import get_dataflow_batch, DataFlowToQueue
 from tensorpack.dataflow.remote import send_dataflow_zmq, RemoteDataZMQ
 
@@ -20,22 +21,27 @@ if __name__ == '__main__':
     parser.add_argument('--datapath', type=str, default='/data/public/rw/coco-pose-estimation-lmdb/')
     parser.add_argument('--batchsize', type=int, default=10)
     parser.add_argument('--gpus', type=int, default=1)
+    parser.add_argument('--max-epoch', type=int, default=50)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-mobilenet_1.0/')
     parser.add_argument('--checkpoint', type=str, default='')
     parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
+
+    parser.add_argument('--input-width', type=int, default=368)
+    parser.add_argument('--input-height', type=int, default=368)
     args = parser.parse_args()
 
     if args.gpus <= 0:
         raise Exception('gpus <= 0')
 
     # define input placeholder
-    input_wh = 368
-    output_size = input_wh // 8
+    set_network_input_wh(args.input_width, args.input_height)
+    output_w = args.input_w // 8
+    output_h = args.input_h // 8
 
-    input_node = tf.placeholder(tf.float32, shape=(args.batchsize, input_wh, input_wh, 3), name='image')
-    vectmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_size, output_size, 38), name='vectmap')
-    heatmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_size, output_size, 19), name='heatmap')
+    input_node = tf.placeholder(tf.float32, shape=(args.batchsize, args.input_height, args.input_width, 3), name='image')
+    vectmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 38), name='vectmap')
+    heatmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 19), name='heatmap')
 
     # prepare data
     if not args.remote_data:
@@ -110,7 +116,6 @@ if __name__ == '__main__':
     global_step = tf.Variable(0, trainable=False)
     starter_learning_rate = args.lr
     momentum = 0.9
-    max_epoch = 50
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
                                                decay_steps=5000, decay_rate=0.90, staircase=True)
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
@@ -167,7 +172,7 @@ if __name__ == '__main__':
         while True:
             _, gs_num = sess.run([train_op, global_step])
 
-            if gs_num > step_per_epoch * max_epoch:
+            if gs_num > step_per_epoch * args.max_epoch:
                 break
 
             if gs_num == 1 or gs_num - last_gs_num >= 100:
@@ -197,7 +202,7 @@ if __name__ == '__main__':
                 logging.info('validation(%d) loss=%f, loss_ll=%f' % (total_cnt, average_loss / total_cnt, average_loss_ll / total_cnt))
                 last_gs_num2 = gs_num
 
-            if gs_num > 0 and gs_num % 10000 == 0:
+            if gs_num > 0 and gs_num % 2000 == 0:
                 saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
 
         saver.save(sess, os.path.join(args.modelpath, 'model_final'), global_step=global_step)

@@ -5,6 +5,7 @@ from shutil import copyfile
 import logging
 from tensorpack.dataflow.remote import send_dataflow_zmq
 
+from pose_augment import set_network_input_wh
 from pose_dataset import get_dataflow_batch
 
 
@@ -21,7 +22,11 @@ if __name__ == '__main__':
     parser.add_argument('--train', type=bool, default=True)
     parser.add_argument('--copydb', type=bool, default=False)
     parser.add_argument('--master', type=str, default='tcp://csi-cluster-gpu20.dakao.io:1027')
+    parser.add_argument('--input-width', type=int, default=368)
+    parser.add_argument('--input-height', type=int, default=368)
     args = parser.parse_args()
+
+    set_network_input_wh(args.input_width, args.input_height)
 
     if args.copydb:
         logging.info('db copy to local+')
