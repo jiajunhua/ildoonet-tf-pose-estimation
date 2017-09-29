@@ -24,6 +24,9 @@ if __name__ == '__main__':
         if i == 100:
             break
         logging.info('Input batch %d received.' % i)
+        if i == 0:
+            for d in dp:
+                logging.info('%d dp shape={}'.format(dp.shape))
         break
 
     logging.info('Speed Test Done for 100 Batches in %f seconds.' % (time.time() - t))
