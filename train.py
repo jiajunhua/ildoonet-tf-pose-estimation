@@ -132,7 +132,7 @@ if __name__ == '__main__':
     tf.summary.scalar("loss_lastlayer", total_ll_loss)
     merged_summary_op = tf.summary.merge_all()
 
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=100)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
     with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
