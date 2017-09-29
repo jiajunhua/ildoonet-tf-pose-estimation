@@ -393,6 +393,8 @@ class DataFlowToQueue(threading.Thread):
 
 
 if __name__ == '__main__':
+    from pose_augment import set_network_input_wh
+    set_network_input_wh(320, 240)
     df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', False)
     # df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
 
@@ -404,6 +406,9 @@ if __name__ == '__main__':
         df.reset_state()
         t1 = time.time()
         for idx, dp in enumerate(df.get_data()):
+            if idx == 0:
+                for d in dp:
+                    logging.info('%d dp shape={}'.format(d.shape))
             if idx % 100 == 0:
                 print(time.time() - t1)
                 t1 = time.time()
