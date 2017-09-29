@@ -1,3 +1,4 @@
+import sys
 import math
 import struct
 import threading
@@ -369,14 +370,15 @@ class DataFlowToQueue(threading.Thread):
                                 feed = dict(zip(self.placeholders, dp))
                                 self.op.run(feed_dict=feed)
                     except (tf.errors.CancelledError, tf.errors.OutOfRangeError, DataFlowTerminated):
-                        logging.error('err type1')
-                        pass
+                        logging.error('err type1, placeholders={}'.format(self.placeholders))
+                        sys.exit(-1)
                     except Exception as e:
-                        logging.error('err type2, {}'.format(str(e)))
+                        logging.error('err type2, err={}, placeholders={}'.format(str(e), self.placeholders))
                         if isinstance(e, RuntimeError) and 'closed Session' in str(e):
                             pass
                         else:
                             logging.exception("Exception in {}:{}".format(self.name, str(e)))
+                        sys.exit(-1)
             except Exception as e:
                 logging.exception("Exception in {}:{}".format(self.name, str(e)))
             finally:

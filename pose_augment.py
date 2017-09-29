@@ -19,11 +19,17 @@ def set_network_input_wh(w, h):
 
 
 def pose_resize_shortestedge_fixed(meta):
-    return pose_resize_shortestedge(meta, max(_network_w, _network_h))
+    ratio_w = _network_w / meta.width
+    ratio_h = _network_h / meta.height
+    ratio = max(ratio_w, ratio_h)
+    return pose_resize_shortestedge(meta, int(min(meta.width * ratio, meta.height * ratio)))
 
 
 def pose_resize_shortestedge_random(meta):
-    target_size = int(max(_network_w, _network_h) * random.uniform(0.5, 1.1))
+    ratio_w = _network_w / meta.width
+    ratio_h = _network_h / meta.height
+    ratio = max(ratio_w, ratio_h)
+    target_size = int(min(meta.width * ratio, meta.height * ratio) * random.uniform(0.5, 1.2))
     return pose_resize_shortestedge(meta, target_size)
 
 
