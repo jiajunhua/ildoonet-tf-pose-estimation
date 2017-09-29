@@ -50,7 +50,7 @@ def pose_resize_shortestedge(meta, target_size):
     if neww < _network_w or newh < _network_h:
         pw = max(0, (_network_w - neww) // 2)
         ph = max(0, (_network_h - newh) // 2)
-        dst = cv2.copyMakeBorder(dst, ph, ph, pw, pw, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+        dst = cv2.copyMakeBorder(dst, ph, ph, pw, pw, cv2.BORDER_CONSTANT, value=(255 // 2, 255 // 2, 255 // 2))
 
     # adjust meta data
     adjust_joint_list = []
