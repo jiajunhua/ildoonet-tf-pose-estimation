@@ -26,10 +26,7 @@ def pose_resize_shortestedge_fixed(meta):
 
 
 def pose_resize_shortestedge_random(meta):
-    ratio_w = _network_w / meta.width
-    ratio_h = _network_h / meta.height
-    ratio = max(ratio_w, ratio_h)
-    target_size = int(min(meta.width * ratio + 0.5, meta.height * ratio + 0.5) * random.uniform(0.5, 1.2))
+    target_size = int(min(meta.width, meta.height) * 1.1 * random.uniform(0.5, 1.2))
     return pose_resize_shortestedge(meta, target_size)
 
 
@@ -50,7 +47,9 @@ def pose_resize_shortestedge(meta, target_size):
     if neww < _network_w or newh < _network_h:
         pw = max(0, (_network_w - neww) // 2)
         ph = max(0, (_network_h - newh) // 2)
-        dst = cv2.copyMakeBorder(dst, ph, ph, pw, pw, cv2.BORDER_CONSTANT, value=(255 // 2, 255 // 2, 255 // 2))
+        mw = (_network_w - neww) % 2
+        mh = (_network_h - newh) % 2
+        dst = cv2.copyMakeBorder(dst, ph, ph+mh, pw, pw+mw, cv2.BORDER_CONSTANT, value=(255 // 2, 255 // 2, 255 // 2))
 
     # adjust meta data
     adjust_joint_list = []

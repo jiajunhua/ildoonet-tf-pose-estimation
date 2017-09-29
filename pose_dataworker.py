@@ -38,6 +38,8 @@ if __name__ == '__main__':
         copyfile(args.datapath + 'lock.mdb', '/tmp/openposedb/lock.mdb')
         logging.info('db copy to local-')
 
-    df = get_dataflow_batch('/tmp/openposedb/', args.train, args.batchsize)
+        df = get_dataflow_batch('/tmp/openposedb/', args.train, args.batchsize)
+    else:
+        df = get_dataflow_batch(args.datapath, args.train, args.batchsize)
 
     send_dataflow_zmq(df, args.master, hwm=10)
