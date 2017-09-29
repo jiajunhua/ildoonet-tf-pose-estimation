@@ -22,14 +22,14 @@ def pose_resize_shortestedge_fixed(meta):
     ratio_w = _network_w / meta.width
     ratio_h = _network_h / meta.height
     ratio = max(ratio_w, ratio_h)
-    return pose_resize_shortestedge(meta, int(min(meta.width * ratio, meta.height * ratio)))
+    return pose_resize_shortestedge(meta, int(min(meta.width * ratio + 0.5, meta.height * ratio + 0.5)))
 
 
 def pose_resize_shortestedge_random(meta):
     ratio_w = _network_w / meta.width
     ratio_h = _network_h / meta.height
     ratio = max(ratio_w, ratio_h)
-    target_size = int(min(meta.width * ratio, meta.height * ratio) * random.uniform(0.5, 1.2))
+    target_size = int(min(meta.width * ratio + 0.5, meta.height * ratio + 0.5) * random.uniform(0.5, 1.2))
     return pose_resize_shortestedge(meta, target_size)
 
 
