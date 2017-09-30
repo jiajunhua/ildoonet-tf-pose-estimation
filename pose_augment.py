@@ -56,7 +56,7 @@ def pose_resize_shortestedge(meta, target_size):
     for joint in meta.joint_list:
         adjust_joint = []
         for point in joint:
-            if point[0] <= 0 or point[1] <= 0:
+            if point[0] <= 0 or point[1] <= 0 or int(point[0]*scale+0.5) > neww or int(point[1]*scale+0.5) > newh:
                 adjust_joint.append((-1, -1))
                 continue
             adjust_joint.append((int(point[0]*scale+0.5) + pw, int(point[1]*scale+0.5) + ph))

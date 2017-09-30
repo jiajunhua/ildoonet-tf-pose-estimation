@@ -115,7 +115,6 @@ if __name__ == '__main__':
     # define optimizer
     global_step = tf.Variable(0, trainable=False)
     starter_learning_rate = args.lr
-    momentum = 0.9
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
                                                decay_steps=5000, decay_rate=0.90, staircase=True)
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
