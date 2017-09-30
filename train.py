@@ -59,8 +59,6 @@ if __name__ == '__main__':
 
     # define model for multi-gpu
     q_inp_split = tf.split(q_inp, args.gpus)
-    q_heat_split = tf.split(q_heat, args.gpus)
-    q_vect_split = tf.split(q_vect, args.gpus)
     output_vectmap = []
     output_heatmap = []
     vectmap_losses = []
@@ -89,16 +87,26 @@ if __name__ == '__main__':
                 l1s, l2s = net.loss_l1_l2()
 
                 for idx, (l1, l2) in enumerate(zip(l1s, l2s)):
-                    vectmap_losses.append(tf.nn.l2_loss(l1 - q_vect_split[gpu_id], name='loss_l1_stage%d_%d' % (idx, gpu_id)))
-                    heatmap_losses.append(tf.nn.l2_loss(l2 - q_heat_split[gpu_id], name='loss_l2_stage%d_%d' % (idx, gpu_id)))
+                    if gpu_id == 0:
+                        vectmap_losses.append([])
+                        heatmap_losses.append([])
+                    vectmap_losses[idx].append(l1)
+                    heatmap_losses[idx].append(l2)
 
     # define loss
-    losses = vectmap_losses
-    losses.extend(heatmap_losses)
-    total_loss = tf.reduce_mean(losses)
+    losses = []
+    for l1_idx, l1 in enumerate(vectmap_losses):
+        l1_concat = tf.concat(l1, axis=0)
+        loss = tf.nn.l2_loss(l1_concat - q_vect, name='loss_l1_stage%d' % l1_idx)
+        losses.append(loss)
+    for l2_idx, l2 in enumerate(heatmap_losses):
+        l2_concat = tf.concat(l2, axis=0)
+        loss = tf.nn.l2_loss(l2_concat - q_heat, name='loss_l2_stage%d' % l2_idx)
+        losses.append(loss)
 
     output_vectmap = tf.concat(output_vectmap, axis=0)
     output_heatmap = tf.concat(output_heatmap, axis=0)
+    total_loss = tf.reduce_mean(losses)
     total_ll_loss = tf.reduce_mean([
         tf.nn.l2_loss(output_vectmap - q_vect),
         tf.nn.l2_loss(output_heatmap - q_heat)
