@@ -116,7 +116,7 @@ if __name__ == '__main__':
     global_step = tf.Variable(0, trainable=False)
     starter_learning_rate = args.lr
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                               decay_steps=5000, decay_rate=0.90, staircase=True)
+                                               decay_steps=15000, decay_rate=0.90, staircase=True)
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
 
@@ -129,6 +129,7 @@ if __name__ == '__main__':
     # tf.summary.image('validation prediction', sample_valid_predict, 1)
     tf.summary.scalar("loss", total_loss)
     tf.summary.scalar("loss_lastlayer", total_ll_loss)
+    tf.summary.scalar("queue_size", enqueuer.size())
     merged_summary_op = tf.summary.merge_all()
 
     saver = tf.train.Saver(max_to_keep=100)
@@ -137,12 +138,13 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         if args.checkpoint:
             logging.info('Restore from checkpoint...')
+            # loader = tf.train.Saver(net.restorable_variables())
+            # loader.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
             saver.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
             logging.info('Restore from checkpoint...Done')
         elif pretrain_path:
             logging.info('Restore pretrained weights...')
             if '.ckpt' in pretrain_path:
-                logging.info(net.restorable_variables().keys())
                 loader = tf.train.Saver(net.restorable_variables())
                 loader.restore(sess, pretrain_path)
             elif '.npy' in pretrain_path:
@@ -175,11 +177,11 @@ if __name__ == '__main__':
                 break
 
             if gs_num == 1 or gs_num - last_gs_num >= 100:
-                train_loss, train_loss_ll, lr_val, summary = sess.run([total_loss, total_ll_loss, learning_rate, merged_summary_op])
+                train_loss, train_loss_ll, lr_val, summary, queue_size = sess.run([total_loss, total_ll_loss, learning_rate, merged_summary_op, enqueuer.size()])
 
                 # log of training loss / accuracy
                 batch_per_sec = gs_num / (time.time() - time_started)
-                logging.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss, train_loss_ll))
+                logging.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g, q=%d' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss, train_loss_ll, queue_size))
                 last_gs_num = gs_num
 
                 file_writer.add_summary(summary, gs_num)

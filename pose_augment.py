@@ -30,10 +30,13 @@ def pose_random_scale(meta):
     for joint in meta.joint_list:
         adjust_joint = []
         for point in joint:
-            if point[0] <= 0 or point[1] <= 0 or int(point[0] * scalew + 0.5) > neww or int(
-                                    point[1] * scaleh + 0.5) > newh:
-                adjust_joint.append((-1, -1))
+            if point[0] < -100 or point[1] < -100:
+                adjust_joint.append((-1000, -1000))
                 continue
+            # if point[0] <= 0 or point[1] <= 0 or int(point[0] * scalew + 0.5) > neww or int(
+            #                         point[1] * scaleh + 0.5) > newh:
+            #     adjust_joint.append((-1, -1))
+            #     continue
             adjust_joint.append((int(point[0] * scalew + 0.5), int(point[1] * scaleh + 0.5)))
         adjust_joint_list.append(adjust_joint)
 
@@ -51,13 +54,7 @@ def pose_resize_shortestedge_fixed(meta):
 
 
 def pose_resize_shortestedge_random(meta):
-    s = random.randint(0, 3)
-    if s == 0:
-        target_size = int(max(meta.width, meta.height) * 1.1 * random.uniform(0.5, 1.4))
-    elif s == 1:
-        target_size = int(min(meta.width, meta.height) * 1.1 * random.uniform(0.5, 1.4))
-    else:
-        target_size = int(min(_network_w, _network_h) * random.uniform(0.7, 1.4))
+    target_size = int(min(_network_w, _network_h) * random.uniform(0.7, 1.4))
 
     return pose_resize_shortestedge(meta, target_size)
 
@@ -95,9 +92,12 @@ def pose_resize_shortestedge(meta, target_size):
     for joint in meta.joint_list:
         adjust_joint = []
         for point in joint:
-            if point[0] <= 0 or point[1] <= 0 or int(point[0]*scale+0.5) > neww or int(point[1]*scale+0.5) > newh:
-                adjust_joint.append((-1, -1))
+            if point[0] < -100 or point[1] < -100:
+                adjust_joint.append((-1000, -1000))
                 continue
+            # if point[0] <= 0 or point[1] <= 0 or int(point[0]*scale+0.5) > neww or int(point[1]*scale+0.5) > newh:
+            #     adjust_joint.append((-1, -1))
+            #     continue
             adjust_joint.append((int(point[0]*scale+0.5) + pw, int(point[1]*scale+0.5) + ph))
         adjust_joint_list.append(adjust_joint)
 
@@ -137,13 +137,16 @@ def pose_crop(meta, x, y, w, h):
     for joint in meta.joint_list:
         adjust_joint = []
         for point in joint:
-            if point[0] <= 0 or point[1] <= 0:
-                adjust_joint.append((-1, -1))
+            if point[0] < -100 or point[1] < -100:
+                adjust_joint.append((-1000, -1000))
                 continue
+            # if point[0] <= 0 or point[1] <= 0:
+            #     adjust_joint.append((-1000, -1000))
+            #     continue
             new_x, new_y = point[0] - x, point[1] - y
-            if new_x <= 0 or new_y <= 0 or new_x > target_size[0] or new_y > target_size[1]:
-                adjust_joint.append((-1, -1))
-                continue
+            # if new_x <= 0 or new_y <= 0 or new_x > target_size[0] or new_y > target_size[1]:
+            #     adjust_joint.append((-1, -1))
+            #     continue
             adjust_joint.append((new_x, new_y))
         adjust_joint_list.append(adjust_joint)
 
@@ -170,9 +173,12 @@ def pose_flip(meta):
         adjust_joint = []
         for cocopart in flip_list:
             point = joint[cocopart.value]
-            if point[0] <= 0 or point[1] <= 0:
-                adjust_joint.append((-1, -1))
+            if point[0] < -100 or point[1] < -100:
+                adjust_joint.append((-1000, -1000))
                 continue
+            # if point[0] <= 0 or point[1] <= 0:
+            #     adjust_joint.append((-1, -1))
+            #     continue
             adjust_joint.append((meta.width - point[0], point[1]))
         adjust_joint_list.append(adjust_joint)
 
@@ -204,9 +210,12 @@ def pose_rotation(meta):
     for joint in meta.joint_list:
         adjust_joint = []
         for point in joint:
-            if point[0] <= 0 or point[1] <= 0:
-                adjust_joint.append((-1, -1))
+            if point[0] < -100 or point[1] < -100:
+                adjust_joint.append((-1000, -1000))
                 continue
+            # if point[0] <= 0 or point[1] <= 0:
+            #     adjust_joint.append((-1, -1))
+            #     continue
             x, y = _rotate_coord((meta.width, meta.height), (newx, newy), point, deg)
             adjust_joint.append((x, y))
         adjust_joint_list.append(adjust_joint)

@@ -78,6 +78,8 @@ class CocoMetadata:
 
             joint_x = CocoMetadata.parse_floats(meta[9+self.num_other_people+3*person_idx][:CocoMetadata.__coco_parts*4], adjust=-1)
             joint_y = CocoMetadata.parse_floats(meta[9+self.num_other_people+3*person_idx+1][:CocoMetadata.__coco_parts*4], adjust=-1)
+            joint_x = [val for val in joint_x if val >= 0 or -1000]
+            joint_y = [val for val in joint_y if val >= 0 or -1000]
             joint_list.append(list(zip(joint_x, joint_y)))
 
         self.joint_list = []
@@ -92,11 +94,11 @@ class CocoMetadata:
                 j2 = prev_joint[idx2-1]
 
                 if j1[0] <= 0 or j1[1] <= 0 or j2[0] <= 0 or j2[1] <= 0:
-                    new_joint.append((-1, -1))
+                    new_joint.append((-1000, -1000))
                 else:
                     new_joint.append(((j1[0] + j2[0]) / 2, (j1[1] + j2[1]) / 2))
 
-            new_joint.append((-1, -1))
+            new_joint.append((-1000, -1000))
             self.joint_list.append(new_joint)
 
         logging.debug('joint size=%d' % len(self.joint_list))
@@ -155,7 +157,7 @@ class CocoMetadata:
                 center_from = joints[j_idx1]
                 center_to = joints[j_idx2]
 
-                if center_from[0] < 0 or center_from[1] < 0 or center_to[0] < 0 or center_to[1] < 0:
+                if center_from[0] < -100 or center_from[1] < -100 or center_to[0] < -100 or center_to[1] < -100:
                     continue
 
                 CocoMetadata.put_vectormap(vectormap, countmap, plane_idx,
@@ -257,9 +259,10 @@ class CocoPoseLMDB(RNGDataFlow):
         inp = cv2.cvtColor(((inp + 1.0) * (255.0 / 2.0)).astype(np.uint8), cv2.COLOR_BGR2RGB)
         return inp
 
-    def __init__(self, path, is_train=True, decode_img=True):
+    def __init__(self, path, is_train=True, decode_img=True, only_idx=-1):
         self.is_train = is_train
         self.decode_img = decode_img
+        self.only_idx = only_idx
         self.env = lmdb.open(path, map_size=int(1e12), readonly=True)
         self.txn = self.env.begin(buffers=True)
         pass
@@ -280,7 +283,10 @@ class CocoPoseLMDB(RNGDataFlow):
 
         for idx in idxs:
             datum = Datum()
-            s = self.txn.get(('%07d' % idx).encode('utf-8'))
+            if self.only_idx < 0:
+                s = self.txn.get(('%07d' % idx).encode('utf-8'))
+            else:
+                s = self.txn.get(('%07d' % self.only_idx).encode('utf-8'))
             datum.ParseFromString(s)
             if isinstance(datum.data, bytes):
                 data = np.fromstring(datum.data, dtype=np.uint8).reshape(datum.channels, datum.height, datum.width)
@@ -357,6 +363,9 @@ class DataFlowToQueue(threading.Thread):
         else:
             logging.warning("DataFlowToQueue {} wasn't under a default session!".format(self.name))
             yield
+
+    def size(self):
+        return self.queue.size()
 
     def start(self):
         self._sess = tf.get_default_session()
