@@ -22,9 +22,8 @@ from tensorpack.dataflow.prefetch import PrefetchData
 from tensorpack.dataflow.base import RNGDataFlow, DataFlowTerminated
 
 from datum_pb2 import Datum
-from network_cmu import CmuNetwork
 from pose_augment import pose_flip, pose_rotation, pose_to_img, pose_crop_random, \
-    pose_resize_shortestedge_random, pose_resize_shortestedge_fixed, pose_crop_center
+    pose_resize_shortestedge_random, pose_resize_shortestedge_fixed, pose_crop_center, pose_random_scale
 
 logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(levelname)s %(message)s')
 
@@ -47,7 +46,12 @@ class CocoMetadata:
         assert len(four_nps) % 4 == 0
         return [(CocoMetadata.parse_float(four_nps[x*4:x*4+4]) + adjust) for x in range(len(four_nps) // 4)]
 
-    def __init__(self, img, meta, sigma):
+    @staticmethod
+    def point_to_target_space(pts, orig_space, target_space):
+        return int(pts[0] / orig_space[0] * target_space [0]+ 0.5), int(pts[1] / orig_space[1] * target_space[1] + 0.5)
+
+    def __init__(self, idx, img, meta, sigma):
+        self.idx = idx
         self.img = img
         self.sigma = sigma
 
@@ -97,14 +101,14 @@ class CocoMetadata:
 
         logging.debug('joint size=%d' % len(self.joint_list))
 
-    def get_heatmap(self, target_size=None):
-        heatmap = np.zeros((CocoMetadata.__coco_parts, self.height, self.width))
+    def get_heatmap(self, target_size):
+        heatmap = np.zeros((CocoMetadata.__coco_parts, target_size[1], target_size[0]))
 
         for joints in self.joint_list:
             for idx, point in enumerate(joints):
                 if point[0] < 0 or point[1] < 0:
                     continue
-                CocoMetadata.put_heatmap(heatmap, idx, point, self.sigma)
+                CocoMetadata.put_heatmap(heatmap, idx, CocoMetadata.point_to_target_space(point, (self.width, self.height), target_size), self.sigma)
 
         heatmap = heatmap.transpose((1, 2, 0))
 
@@ -114,9 +118,6 @@ class CocoMetadata:
             for x in range(width):
                 maximum = max(heatmap[y][x])
                 heatmap[y][x][-1] = max(1.0 - maximum, 0.0)
-
-        if target_size:
-            heatmap = cv2.resize(heatmap, target_size, interpolation=cv2.INTER_AREA)
 
         return heatmap
 
@@ -143,9 +144,9 @@ class CocoMetadata:
                 heatmap[plane_idx][y][x] += math.exp(-exp)
                 heatmap[plane_idx][y][x] = min(heatmap[plane_idx][y][x], 1.0)
 
-    def get_vectormap(self, target_size=None):
-        vectormap = np.zeros((CocoMetadata.__coco_parts*2, self.height, self.width))
-        countmap = np.zeros((CocoMetadata.__coco_parts, self.height, self.width))
+    def get_vectormap(self, target_size):
+        vectormap = np.zeros((CocoMetadata.__coco_parts*2, target_size[1], target_size[0]))
+        countmap = np.zeros((CocoMetadata.__coco_parts, target_size[1], target_size[0]))
         for joints in self.joint_list:
             for plane_idx, (j_idx1, j_idx2) in enumerate(CocoMetadata.__coco_vecs):
                 j_idx1 -= 1
@@ -157,7 +158,10 @@ class CocoMetadata:
                 if center_from[0] < 0 or center_from[1] < 0 or center_to[0] < 0 or center_to[1] < 0:
                     continue
 
-                CocoMetadata.put_vectormap(vectormap, countmap, plane_idx, center_from, center_to)
+                CocoMetadata.put_vectormap(vectormap, countmap, plane_idx,
+                                           CocoMetadata.point_to_target_space(center_from, (self.width, self.height), target_size),
+                                           CocoMetadata.point_to_target_space(center_to, (self.width, self.height), target_size),
+                                           )
 
         vectormap = vectormap.transpose((1, 2, 0))
         nonzeros = np.nonzero(countmap)
@@ -167,13 +171,10 @@ class CocoMetadata:
             vectormap[y][x][p*2+0] /= countmap[p][y][x]
             vectormap[y][x][p*2+1] /= countmap[p][y][x]
 
-        if target_size:
-            vectormap = cv2.resize(vectormap, target_size, interpolation=cv2.INTER_AREA)
-
         return vectormap
 
     @staticmethod
-    def put_vectormap(vectormap, countmap, plane_idx, center_from, center_to, threshold=8):
+    def put_vectormap(vectormap, countmap, plane_idx, center_from, center_to, threshold=1):
         _, height, width = vectormap.shape[:3]
 
         vec_x = center_to[0] - center_from[0]
@@ -256,8 +257,9 @@ class CocoPoseLMDB(RNGDataFlow):
         inp = cv2.cvtColor(((inp + 1.0) * (255.0 / 2.0)).astype(np.uint8), cv2.COLOR_BGR2RGB)
         return inp
 
-    def __init__(self, path, is_train=True):
+    def __init__(self, path, is_train=True, decode_img=True):
         self.is_train = is_train
+        self.decode_img = decode_img
         self.env = lmdb.open(path, map_size=int(1e12), readonly=True)
         self.txn = self.env.begin(buffers=True)
         pass
@@ -285,9 +287,12 @@ class CocoPoseLMDB(RNGDataFlow):
             else:
                 data = np.fromstring(datum.data.tobytes(), dtype=np.uint8).reshape(datum.channels, datum.height,
                                                                                    datum.width)
-            img = data[:3].transpose((1, 2, 0))
+            if self.decode_img:
+                img = data[:3].transpose((1, 2, 0))
+            else:
+                img = None
 
-            meta = CocoMetadata(img, data[3], 6.0)
+            meta = CocoMetadata(idx, img, data[3], 1.0)
 
             yield [meta]
 
@@ -295,6 +300,7 @@ class CocoPoseLMDB(RNGDataFlow):
 def get_dataflow(path, is_train):
     ds = CocoPoseLMDB(path, is_train)       # read data from lmdb
     if is_train:
+        ds = MapDataComponent(ds, pose_random_scale)
         ds = MapDataComponent(ds, pose_rotation)
         ds = MapDataComponent(ds, pose_flip)
         ds = MapDataComponent(ds, pose_resize_shortestedge_random)

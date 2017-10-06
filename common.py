@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import itertools
 import tensorflow as tf
-from scipy.ndimage.filters import maximum_filter
+from scipy.ndimage.filters import maximum_filter, gaussian_filter
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -42,39 +42,35 @@ CocoPairsNetwork = [
     (6, 7), (8, 9), (10, 11), (28, 29), (30, 31), (34, 35), (32, 33), (36, 37), (18, 19), (26, 27)
  ]  # = 19
 
-NMS_Threshold = 0.05
-InterMinAbove_Threshold = 6
+NMS_Threshold = 0.1
+InterMinAbove_Threshold = 4
 Inter_Threashold = 0.05
 Min_Subset_Cnt = 3
 Min_Subset_Score = 0.4
 Max_Human = 96
 
 
-def non_max_suppression_tf(np_input, window_size=3, threshold=NMS_Threshold):
-    # input: B x W x H x C
-    under_threshold_indices = np_input < threshold
-    np_input[under_threshold_indices] = 0
-    np_input = np_input.reshape([1, 30, 40, 1])
-    pooled = tf.nn.max_pool(np_input, ksize=[1, window_size, window_size, 1], strides=[1, 1, 1, 1], padding='SAME')
-    output = tf.where(tf.equal(np_input, pooled), np_input, tf.zeros_like(np_input))
-    # NOTE: if input has negative values, the suppressed values can be higher than original
-    return output.eval().reshape([30, 40])   # output: B X W X H x C
-
-
-def non_max_suppression_scipy(np_input, window_size=3, threshold=NMS_Threshold):
+def non_max_suppression(np_input, window_size=3, threshold=NMS_Threshold):
     under_threshold_indices = np_input < threshold
     np_input[under_threshold_indices] = 0
     return np_input*(np_input == maximum_filter(np_input, footprint=np.ones((window_size, window_size))))
 
 
-non_max_suppression = non_max_suppression_scipy
-
-
 def estimate_pose(heatMat, pafMat):
+    if heatMat.shape[2] == 19:
+        heatMat = np.rollaxis(heatMat, 2, 0)
+    if pafMat.shape[2] == 38:
+        pafMat = np.rollaxis(pafMat, 2, 0)
+
+    # reliability issue.
+    logging.debug('preprocess')
+    heatMat = heatMat - heatMat.min(axis=1).min(axis=1).reshape(19, 1, 1)
+
     logging.debug('nms')
+    # heatMat = gaussian_filter(heatMat, sigma=0.5)
     coords = []
     for plain in heatMat:
-        nms = non_max_suppression(plain, 3, NMS_Threshold)
+        nms = non_max_suppression(plain, 5, NMS_Threshold)
         coords.append(np.where(nms >= NMS_Threshold))
 
     logging.debug('estimate_pose1')
@@ -162,23 +158,28 @@ def get_score(x1, y1, x2, y2, pafMatX, pafMatY):
     dx, dy = x2 - x1, y2 - y1
     normVec = math.sqrt(dx ** 2 + dy ** 2)
 
-    if normVec < 1e-6:
+    if normVec < 1e-4:
         return 0.0, 0
 
     vx, vy = dx / normVec, dy / normVec
 
-    xs = np.arange(x1, x2, dx / __num_inter_f) if x1 != x2 else [x1] * __num_inter
-    ys = np.arange(y1, y2, dy / __num_inter_f) if y1 != y2 else [y1] * __num_inter
+    xs = np.arange(x1, x2, dx / __num_inter_f) if x1 != x2 else np.full((__num_inter, ), x1)
+    ys = np.arange(y1, y2, dy / __num_inter_f) if y1 != y2 else np.full((__num_inter, ), y1)
+    xs = (xs + 0.5).astype(np.int16)
+    ys = (ys + 0.5).astype(np.int16)
+
+    # without vectorization
     pafXs = np.zeros(__num_inter)
     pafYs = np.zeros(__num_inter)
     for idx, (mx, my) in enumerate(zip(xs, ys)):
-        mx, my = int(mx + 0.5), int(my + 0.5)
-        mx, my = max(mx, 0), max(my, 0)
-
         pafXs[idx] = pafMatX[my][mx]
         pafYs[idx] = pafMatY[my][mx]
+
+    # vectorization slow?
+    # pafXs = pafMatX[ys, xs]
+    # pafYs = pafMatY[ys, xs]
 
     local_scores = pafXs * vx + pafYs * vy
     thidxs = local_scores > Inter_Threashold
 
-    return sum(local_scores*thidxs), sum(thidxs)
+    return sum(local_scores * thidxs), sum(thidxs)

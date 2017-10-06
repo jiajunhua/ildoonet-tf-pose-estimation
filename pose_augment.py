@@ -18,6 +18,31 @@ def set_network_input_wh(w, h):
     _network_w, _network_h = w, h
 
 
+def pose_random_scale(meta):
+    scalew = random.uniform(0.8, 1.2)
+    scaleh = random.uniform(0.8, 1.2)
+    neww = int(meta.width * scalew)
+    newh = int(meta.height * scaleh)
+    dst = cv2.resize(meta.img, (neww, newh), interpolation=cv2.INTER_AREA)
+
+    # adjust meta data
+    adjust_joint_list = []
+    for joint in meta.joint_list:
+        adjust_joint = []
+        for point in joint:
+            if point[0] <= 0 or point[1] <= 0 or int(point[0] * scalew + 0.5) > neww or int(
+                                    point[1] * scaleh + 0.5) > newh:
+                adjust_joint.append((-1, -1))
+                continue
+            adjust_joint.append((int(point[0] * scalew + 0.5), int(point[1] * scaleh + 0.5)))
+        adjust_joint_list.append(adjust_joint)
+
+    meta.joint_list = adjust_joint_list
+    meta.width, meta.height = neww, newh
+    meta.img = dst
+    return meta
+
+
 def pose_resize_shortestedge_fixed(meta):
     ratio_w = _network_w / meta.width
     ratio_h = _network_h / meta.height
@@ -26,7 +51,14 @@ def pose_resize_shortestedge_fixed(meta):
 
 
 def pose_resize_shortestedge_random(meta):
-    target_size = int(min(meta.width, meta.height) * 1.1 * random.uniform(0.5, 1.2))
+    s = random.randint(0, 3)
+    if s == 0:
+        target_size = int(max(meta.width, meta.height) * 1.1 * random.uniform(0.5, 1.4))
+    elif s == 1:
+        target_size = int(min(meta.width, meta.height) * 1.1 * random.uniform(0.5, 1.4))
+    else:
+        target_size = int(min(_network_w, _network_h) * random.uniform(0.7, 1.4))
+
     return pose_resize_shortestedge(meta, target_size)
 
 
@@ -49,7 +81,14 @@ def pose_resize_shortestedge(meta, target_size):
         ph = max(0, (_network_h - newh) // 2)
         mw = (_network_w - neww) % 2
         mh = (_network_h - newh) % 2
-        dst = cv2.copyMakeBorder(dst, ph, ph+mh, pw, pw+mw, cv2.BORDER_CONSTANT, value=(255 // 2, 255 // 2, 255 // 2))
+        cr = random.randint(0, 4)
+        if cr == 0:
+            color = 0
+        elif cr == 1:
+            color = 255
+        else:
+            color = 255 // 2
+        dst = cv2.copyMakeBorder(dst, ph, ph+mh, pw, pw+mw, cv2.BORDER_CONSTANT, value=(color, color, color))
 
     # adjust meta data
     adjust_joint_list = []
