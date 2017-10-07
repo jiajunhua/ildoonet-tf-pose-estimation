@@ -130,35 +130,31 @@ class BaseNetwork(object):
         assert padding in ('SAME', 'VALID')
 
     @layer
-    def separable_conv(self, input, k_h, k_w, c_o, stride, name, relu=True, trainable=True):
-        # with slim.arg_scope([slim.batch_norm], fused=True):
-        # skip pointwise by setting num_outputs=None
-        output = slim.separable_convolution2d(input,
-                                              num_outputs=None,
-                                              stride=stride,
-                                              trainable=self.trainable,
-                                              depth_multiplier=1.0,
-                                              kernel_size=[k_h, k_w],
-                                              activation_fn=None,
-                                              # weights_initializer=tf.truncated_normal_initializer(stddev=0.0001),
-                                              weights_initializer=slim.initializers.xavier_initializer(),
-                                              biases_initializer=slim.init_ops.zeros_initializer(),
-                                              padding=DEFAULT_PADDING,
-                                              # normalizer_fn=slim.batch_norm,
-                                              scope=name + '_depthwise')
-
+    def separable_conv(self, input, k_h, k_w, c_o, stride, name, relu=True):
         with slim.arg_scope([slim.batch_norm], fused=True):
+            output = slim.separable_convolution2d(input,
+                                                  num_outputs=None,
+                                                  stride=stride,
+                                                  trainable=self.trainable,
+                                                  depth_multiplier=1.0,
+                                                  kernel_size=[k_h, k_w],
+                                                  activation_fn=tf.nn.relu if relu else None,
+                                                  weights_initializer=tf.truncated_normal_initializer(stddev=0.09),
+                                                  biases_initializer=None,
+                                                  padding=DEFAULT_PADDING,
+                                                  normalizer_fn=slim.batch_norm,
+                                                  scope=name + '_depthwise')
+
             output = slim.convolution2d(output,
                                         c_o,
                                         stride=1,
                                         kernel_size=[1, 1],
                                         activation_fn=tf.nn.relu if relu else None,
-                                        # activation_fn=tf.nn.relu if relu else None,
-                                        # weights_initializer=tf.truncated_normal_initializer(stddev=0.0001),
-                                        weights_initializer=slim.initializers.xavier_initializer(),
-                                        biases_initializer=slim.init_ops.zeros_initializer(),
+                                        weights_initializer=tf.truncated_normal_initializer(stddev=0.09),
+                                        biases_initializer=None,
                                         normalizer_fn=slim.batch_norm,
                                         trainable=self.trainable,
+                                        weights_regularizer=tf.contrib.layers.l2_regularizer(0.00004),
                                         scope=name + '_pointwise')
 
         return output

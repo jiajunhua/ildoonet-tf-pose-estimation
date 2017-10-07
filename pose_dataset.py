@@ -298,7 +298,7 @@ class CocoPoseLMDB(RNGDataFlow):
             else:
                 img = None
 
-            meta = CocoMetadata(idx, img, data[3], 1.0)
+            meta = CocoMetadata(idx, img, data[3], sigma=1.0)
 
             yield [meta]
 
