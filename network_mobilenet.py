@@ -13,7 +13,7 @@ class MobilenetNetwork(network_base.BaseNetwork):
 
         with tf.variable_scope(None, 'MobilenetV1'):
             (self.feed('image')
-             .conv(3, 3, depth(32), 2, 2, biased=False, name='Conv2d_0', trainable=self.trainable)
+             .convb(3, 3, depth(32), 2, name='Conv2d_0')
              .separable_conv(3, 3, depth(64), 1, name='Conv2d_1')
              .separable_conv(3, 3, depth(128), 2, name='Conv2d_2')
              .separable_conv(3, 3, depth(128), 1, name='Conv2d_3')
@@ -96,7 +96,6 @@ class MobilenetNetwork(network_base.BaseNetwork):
     def restorable_variables(self):
         vs = {v.op.name: v for v in tf.global_variables() if
               'MobilenetV1/Conv2d' in v.op.name and
-              'RMSProp' not in v.op.name and
-              'bias' not in v.op.name
+              'RMSProp' not in v.op.name and 'Momentum' not in v.op.name and 'Ada' not in v.op.name
               }
         return vs

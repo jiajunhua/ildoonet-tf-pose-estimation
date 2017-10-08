@@ -4,6 +4,7 @@ import time
 import logging
 from tensorpack.dataflow.remote import RemoteDataZMQ
 
+from pose_dataset import CocoPoseLMDB
 
 logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(levelname)s %(message)s')
 
@@ -13,6 +14,7 @@ if __name__ == '__main__':
     """
     parser = argparse.ArgumentParser(description='Worker for preparing input batches.')
     parser.add_argument('--listen', type=str, default='tcp://0.0.0.0:1027')
+    parser.add_argument('--show', type=bool, default=False)
     args = parser.parse_args()
 
     df = RemoteDataZMQ(args.listen)
@@ -27,6 +29,8 @@ if __name__ == '__main__':
         if i == 0:
             for d in dp:
                 logging.info('%d dp shape={}'.format(d.shape))
-        break
+
+        if args.show:
+            CocoPoseLMDB.display_image(dp[0][0], dp[1][0], dp[2][0])
 
     logging.info('Speed Test Done for 100 Batches in %f seconds.' % (time.time() - t))

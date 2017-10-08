@@ -342,7 +342,7 @@ def get_dataflow_batch(path, is_train, batchsize):
 
 
 class DataFlowToQueue(threading.Thread):
-    def __init__(self, ds, placeholders, queue_size=10):
+    def __init__(self, ds, placeholders, queue_size=5):
         super().__init__()
         self.daemon = True
 
@@ -409,9 +409,9 @@ class DataFlowToQueue(threading.Thread):
 
 if __name__ == '__main__':
     from pose_augment import set_network_input_wh
-    set_network_input_wh(320, 240)
-    df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', False)
-    # df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
+    set_network_input_wh(368, 368)
+    # df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', False)
+    df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
 
     # input_node = tf.placeholder(tf.float32, shape=(None, 368, 368, 3), name='image')
     with tf.Session() as sess:

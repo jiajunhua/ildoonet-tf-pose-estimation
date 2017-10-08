@@ -5,6 +5,7 @@ import time
 
 import datetime
 import tensorflow as tf
+from tensorflow.python.client import timeline
 
 from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
@@ -47,7 +48,7 @@ if __name__ == '__main__':
     if not args.remote_data:
         df = get_dataflow_batch(args.datapath, True, args.batchsize)
     else:
-        df = RemoteDataZMQ(args.remote_data, hwm=10)
+        df = RemoteDataZMQ(args.remote_data, hwm=5)
     enqueuer = DataFlowToQueue(df, [input_node, heatmap_node, vectmap_node], queue_size=100)
     q_inp, q_heat, q_vect = enqueuer.dequeue()
 
@@ -107,17 +108,17 @@ if __name__ == '__main__':
     output_vectmap = tf.concat(output_vectmap, axis=0)
     output_heatmap = tf.concat(output_heatmap, axis=0)
     total_loss = tf.reduce_mean(losses)
-    total_ll_loss = tf.reduce_mean([
-        tf.nn.l2_loss(output_vectmap - q_vect),
-        tf.nn.l2_loss(output_heatmap - q_heat)
-    ])
+    total_loss_ll_paf = tf.reduce_mean(tf.nn.l2_loss(output_vectmap - q_vect))
+    total_loss_ll_heat = tf.reduce_mean(tf.nn.l2_loss(output_heatmap - q_heat))
+    total_ll_loss = tf.reduce_mean([total_loss_ll_paf, total_loss_ll_heat])
 
     # define optimizer
     global_step = tf.Variable(0, trainable=False)
     starter_learning_rate = args.lr
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                               decay_steps=15000, decay_rate=0.90, staircase=True)
+                                               decay_steps=20000, decay_rate=0.333, staircase=True)
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
+    # optimizer = tf.train.AdadeltaOptimizer(learning_rate)
     train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
 
     # define summary
@@ -129,6 +130,8 @@ if __name__ == '__main__':
     # tf.summary.image('validation prediction', sample_valid_predict, 1)
     tf.summary.scalar("loss", total_loss)
     tf.summary.scalar("loss_lastlayer", total_ll_loss)
+    tf.summary.scalar("loss_lastlayer_paf", tf.nn.l2_loss(output_vectmap - q_vect))
+    tf.summary.scalar("loss_lastlayer_heat", tf.nn.l2_loss(output_heatmap - q_heat))
     tf.summary.scalar("queue_size", enqueuer.size())
     merged_summary_op = tf.summary.merge_all()
 
@@ -166,10 +169,22 @@ if __name__ == '__main__':
         enqueuer.set_coordinator(coord)
         enqueuer.start()
 
+        logging.info('examine timeline')
+        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+        run_metadata = tf.RunMetadata()
+        sess.run([train_op, global_step])
+        _, gs_num = sess.run([train_op, global_step], options=run_options, run_metadata=run_metadata)
+        tl = timeline.Timeline(run_metadata.step_stats)
+        ctf = tl.generate_chrome_trace_format()
+        with open('timeline.json', 'w') as f:
+            f.write(ctf)
+
         logging.info('Training Started.')
         time_started = time.time()
         last_gs_num = last_gs_num2 = 0
         step_per_epoch = 121745 // args.batchsize
+        initial_gs_num = sess.run(global_step)
+
         while True:
             _, gs_num = sess.run([train_op, global_step])
 
@@ -177,11 +192,11 @@ if __name__ == '__main__':
                 break
 
             if gs_num == 1 or gs_num - last_gs_num >= 100:
-                train_loss, train_loss_ll, lr_val, summary, queue_size = sess.run([total_loss, total_ll_loss, learning_rate, merged_summary_op, enqueuer.size()])
+                train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, lr_val, summary, queue_size = sess.run([total_loss, total_ll_loss, total_loss_ll_paf, total_loss_ll_heat, learning_rate, merged_summary_op, enqueuer.size()])
 
                 # log of training loss / accuracy
-                batch_per_sec = gs_num / (time.time() - time_started)
-                logging.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g, q=%d' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss, train_loss_ll, queue_size))
+                batch_per_sec = (gs_num - initial_gs_num) / (time.time() - time_started)
+                logging.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g, loss_ll_paf=%g, loss_ll_heat=%g, q=%d' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, queue_size))
                 last_gs_num = gs_num
 
                 file_writer.add_summary(summary, gs_num)

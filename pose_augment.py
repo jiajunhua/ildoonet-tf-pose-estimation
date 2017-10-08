@@ -54,8 +54,7 @@ def pose_resize_shortestedge_fixed(meta):
 
 
 def pose_resize_shortestedge_random(meta):
-    target_size = int(min(_network_w, _network_h) * random.uniform(0.7, 1.4))
-
+    target_size = int(min(_network_w, _network_h) * random.uniform(0.7, 1.5))
     return pose_resize_shortestedge(meta, target_size)
 
 

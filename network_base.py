@@ -138,11 +138,11 @@ class BaseNetwork(object):
                                                   trainable=self.trainable,
                                                   depth_multiplier=1.0,
                                                   kernel_size=[k_h, k_w],
-                                                  activation_fn=tf.nn.relu if relu else None,
+                                                  activation_fn=None,
+                                                  # weights_initializer=tf.contrib.layers.xavier_initializer(),
                                                   weights_initializer=tf.truncated_normal_initializer(stddev=0.09),
                                                   biases_initializer=None,
                                                   padding=DEFAULT_PADDING,
-                                                  normalizer_fn=slim.batch_norm,
                                                   scope=name + '_depthwise')
 
             output = slim.convolution2d(output,
@@ -150,13 +150,24 @@ class BaseNetwork(object):
                                         stride=1,
                                         kernel_size=[1, 1],
                                         activation_fn=tf.nn.relu if relu else None,
+                                        # weights_initializer=tf.contrib.layers.xavier_initializer(),
                                         weights_initializer=tf.truncated_normal_initializer(stddev=0.09),
-                                        biases_initializer=None,
+                                        biases_initializer=slim.init_ops.zeros_initializer(),
                                         normalizer_fn=slim.batch_norm,
                                         trainable=self.trainable,
-                                        weights_regularizer=tf.contrib.layers.l2_regularizer(0.00004),
+                                        # weights_regularizer=tf.contrib.layers.l2_regularizer(0.00004),
+                                        weights_regularizer=None,
                                         scope=name + '_pointwise')
 
+        return output
+
+    @layer
+    def convb(self, input, k_h, k_w, c_o, stride, name):
+        with slim.arg_scope([slim.batch_norm], fused=True):
+            output = slim.convolution2d(input, c_o, kernel_size=[k_h, k_w],
+                                        stride=stride,
+                                        normalizer_fn=slim.batch_norm,
+                                        scope=name)
         return output
 
     @layer
