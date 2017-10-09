@@ -71,6 +71,7 @@ if __name__ == '__main__':
     output_heatmap = []
     vectmap_losses = []
     heatmap_losses = []
+
     for gpu_id in range(args.gpus):
         with tf.device(tf.DeviceSpec(device_type="GPU", device_index=gpu_id)):
             with tf.variable_scope(tf.get_variable_scope(), reuse=(gpu_id > 0)):
@@ -222,7 +223,7 @@ if __name__ == '__main__':
                 for images_test, heatmaps, vectmaps in validation_cache:
                     lss, lss_ll, vectmap_sample, heatmap_sample = sess.run(
                         [total_loss, total_ll_loss, output_vectmap, output_heatmap],
-                        feed_dict={input_node: images_test, vectmap_node: vectmaps, heatmap_node: heatmaps}
+                        feed_dict={q_inp: images_test, q_vect: vectmaps, q_heat: heatmaps}
                     )
                     average_loss += lss * len(images_test)
                     average_loss_ll += lss_ll * len(images_test)
@@ -235,7 +236,7 @@ if __name__ == '__main__':
                     [
                         net.get_output(name=last_layer.format(aux=1)),
                         net.get_output(name=last_layer.format(aux=2))
-                    ], feed_dict={'image:0': np.array([val_image]*args.batchsize)}
+                    ], feed_dict={q_inp: np.array([val_image]*args.batchsize)}
                 )
                 test_result = CocoPoseLMDB.display_image(val_image, heatMat[0], pafMat[0], as_numpy=True)
                 test_result = cv2.resize(test_result, (640, 640))
