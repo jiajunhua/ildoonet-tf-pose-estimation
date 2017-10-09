@@ -10,7 +10,6 @@ from contextlib import contextmanager
 import lmdb
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import time
 
 import tensorflow as tf
@@ -24,6 +23,10 @@ from tensorpack.dataflow.base import RNGDataFlow, DataFlowTerminated
 from datum_pb2 import Datum
 from pose_augment import pose_flip, pose_rotation, pose_to_img, pose_crop_random, \
     pose_resize_shortestedge_random, pose_resize_shortestedge_fixed, pose_crop_center, pose_random_scale
+
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(levelname)s %(message)s')
 
