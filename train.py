@@ -2,15 +2,17 @@ import argparse
 import logging
 import os
 import time
-
 import datetime
+
+import cv2
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import timeline
 
 from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
 from pose_augment import set_network_input_wh
-from pose_dataset import get_dataflow_batch, DataFlowToQueue
+from pose_dataset import get_dataflow_batch, DataFlowToQueue, CocoPoseLMDB
 from tensorpack.dataflow.remote import send_dataflow_zmq, RemoteDataZMQ
 
 logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(levelname)s %(message)s')
@@ -58,6 +60,11 @@ if __name__ == '__main__':
     for images_test, heatmaps, vectmaps in df_valid.get_data():
         validation_cache.append((images_test, heatmaps, vectmaps))
 
+    val_image = cv2.imread('./images/person1.jpg')
+    val_image = cv2.resize(val_image, (args.input_width, args.input_height))
+    val_image = val_image.astype(float)
+    val_image = val_image * (2.0 / 255.0) - 1.0
+
     # define model for multi-gpu
     q_inp_split = tf.split(q_inp, args.gpus)
     output_vectmap = []
@@ -70,15 +77,19 @@ if __name__ == '__main__':
                 if args.model == 'mobilenet_1.0':
                     net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=1.0)
                     pretrain_path = './models/pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
+                    last_layer = 'MConv_Stage6_L{aux}_5'
                 elif args.model == 'mobilenet_0.75':
                     net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.75)
                     pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
+                    last_layer = 'MConv_Stage6_L{aux}_5'
                 elif args.model == 'mobilenet_0.50':
                     net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.50)
                     pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
+                    last_layer = 'MConv_Stage6_L{aux}_5'
                 elif args.model == 'cmu':
                     net = CmuNetwork({'image': q_inp_split[gpu_id]})
                     pretrain_path = './models/numpy/openpose_coco.npy'
+                    last_layer = 'Mconv7_stage6_L{aux}'
                 else:
                     raise Exception('Invalid Mode.')
                 vect, heat = net.loss_last()
@@ -122,18 +133,20 @@ if __name__ == '__main__':
     train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
 
     # define summary
-    sample_train = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
-    sample_valid_gt = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
-    sample_valid_predict = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
-    # tf.summary.image('training sample', sample_train, 1)
-    # tf.summary.image('validation ground truth', sample_valid_gt, 1)
-    # tf.summary.image('validation prediction', sample_valid_predict, 1)
     tf.summary.scalar("loss", total_loss)
     tf.summary.scalar("loss_lastlayer", total_ll_loss)
     tf.summary.scalar("loss_lastlayer_paf", tf.nn.l2_loss(output_vectmap - q_vect))
     tf.summary.scalar("loss_lastlayer_heat", tf.nn.l2_loss(output_heatmap - q_heat))
     tf.summary.scalar("queue_size", enqueuer.size())
     merged_summary_op = tf.summary.merge_all()
+
+    valid_loss = tf.placeholder(tf.float32, shape=[])
+    valid_loss_ll = tf.placeholder(tf.float32, shape=[])
+    sample_train = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
+    valid_img = tf.summary.image('training sample', sample_train, 1)
+    valid_loss_t = tf.summary.scalar("loss_valid", valid_loss)
+    valid_loss_ll_t = tf.summary.scalar("loss_valid_lastlayer", valid_loss_ll)
+    merged_validate_op = tf.summary.merge([valid_img, valid_loss_t, valid_loss_ll_t])
 
     saver = tf.train.Saver(max_to_keep=100)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -217,6 +230,23 @@ if __name__ == '__main__':
 
                 logging.info('validation(%d) loss=%f, loss_ll=%f' % (total_cnt, average_loss / total_cnt, average_loss_ll / total_cnt))
                 last_gs_num2 = gs_num
+
+                pafMat, heatMat = sess.run(
+                    [
+                        net.get_output(name=last_layer.format(aux=1)),
+                        net.get_output(name=last_layer.format(aux=2))
+                    ], feed_dict={'image:0': np.array([val_image]*args.batchsize)}
+                )
+                test_result = CocoPoseLMDB.display_image(val_image, heatMat[0], pafMat[0], as_numpy=True)
+                test_result = cv2.resize(test_result, (640, 640))
+                test_result = test_result.reshape([1, 640, 640, 3]).astype(float)
+
+                summary = sess.run(merged_validate_op, feed_dict={
+                    valid_loss: average_loss / total_cnt,
+                    valid_loss_ll: average_loss_ll / total_cnt,
+                    sample_train: test_result
+                })
+                file_writer.add_summary(summary, gs_num)
 
             if gs_num > 0 and gs_num % 2000 == 0:
                 saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
