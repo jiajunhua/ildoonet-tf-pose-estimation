@@ -144,10 +144,12 @@ if __name__ == '__main__':
     valid_loss = tf.placeholder(tf.float32, shape=[])
     valid_loss_ll = tf.placeholder(tf.float32, shape=[])
     sample_train = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
-    valid_img = tf.summary.image('training sample', sample_train, 1)
+    sample_valid = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
+    train_img = tf.summary.image('training sample', sample_train, 1)
+    valid_img = tf.summary.image('validation sample', sample_valid, 1)
     valid_loss_t = tf.summary.scalar("loss_valid", valid_loss)
     valid_loss_ll_t = tf.summary.scalar("loss_valid_lastlayer", valid_loss_ll)
-    merged_validate_op = tf.summary.merge([valid_img, valid_loss_t, valid_loss_ll_t])
+    merged_validate_op = tf.summary.merge([train_img, valid_img, valid_loss_t, valid_loss_ll_t])
 
     saver = tf.train.Saver(max_to_keep=100)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -232,20 +234,26 @@ if __name__ == '__main__':
                 logging.info('validation(%d) loss=%f, loss_ll=%f' % (total_cnt, average_loss / total_cnt, average_loss_ll / total_cnt))
                 last_gs_num2 = gs_num
 
+                sample_image = enqueuer.last_dp[0][0]
                 pafMat, heatMat = sess.run(
                     [
                         net.get_output(name=last_layer.format(aux=1)),
                         net.get_output(name=last_layer.format(aux=2))
-                    ], feed_dict={q_inp: np.array([val_image]*args.batchsize)}
+                    ], feed_dict={q_inp: np.array([val_image, sample_image]*(args.batchsize // 2))}
                 )
                 test_result = CocoPoseLMDB.display_image(val_image, heatMat[0], pafMat[0], as_numpy=True)
                 test_result = cv2.resize(test_result, (640, 640))
                 test_result = test_result.reshape([1, 640, 640, 3]).astype(float)
 
+                sample_result = CocoPoseLMDB.display_image(sample_image, heatMat[1], pafMat[1], as_numpy=True)
+                sample_result = cv2.resize(sample_result, (640, 640))
+                sample_result = sample_result.reshape([1, 640, 640, 3]).astype(float)
+
                 summary = sess.run(merged_validate_op, feed_dict={
                     valid_loss: average_loss / total_cnt,
                     valid_loss_ll: average_loss_ll / total_cnt,
-                    sample_train: test_result
+                    sample_valid: test_result,
+                    sample_train: sample_result
                 })
                 file_writer.add_summary(summary, gs_num)
 
