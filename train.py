@@ -27,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--max-epoch', type=int, default=60)
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-mobilenet_1.0/')
+    parser.add_argument('--logpath', type=str, default='/data/private/tf-openpose-log/')
     parser.add_argument('--checkpoint', type=str, default='')
     parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
 
@@ -91,6 +92,16 @@ if __name__ == '__main__':
                     net = CmuNetwork({'image': q_inp_split[gpu_id]})
                     pretrain_path = './models/numpy/openpose_coco.npy'
                     last_layer = 'Mconv7_stage6_L{aux}'
+                elif args.model == 'mobilenet_p_1.0':
+                    from network_mobilenet3 import MobilenetNetwork
+                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=1.0)
+                    pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
+                    last_layer = 'MConv_Stage6_L{aux}_5'
+                elif args.model == 'mobilenet_p_0.50':
+                    from network_mobilenet3 import MobilenetNetwork
+                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.50)
+                    pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
+                    last_layer = 'MConv_Stage6_L{aux}_5'
                 else:
                     raise Exception('Invalid Mode.')
                 vect, heat = net.loss_last()
@@ -171,14 +182,13 @@ if __name__ == '__main__':
             logging.info('Restore pretrained weights...Done')
 
         logging.info('prepare file writer')
-        training_name = '{}_{}_batch:{}_lr:{}_gpus:{}'.format(
-            datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
+        training_name = '{}_batch:{}_lr:{}_gpus:{}'.format(
             args.model,
             args.batchsize,
             args.lr,
             args.gpus
         )
-        file_writer = tf.summary.FileWriter('/root/tensorboard-openpose/{}/'.format(training_name), sess.graph)
+        file_writer = tf.summary.FileWriter(args.logpath + training_name, sess.graph)
 
         logging.info('prepare coordinator')
         coord = tf.train.Coordinator()
