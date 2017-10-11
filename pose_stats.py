@@ -1,5 +1,9 @@
+from tensorpack import imgaug
+from tensorpack.dataflow.common import MapDataComponent, MapData
+from tensorpack.dataflow.image import AugmentImageComponent
+
 from common import CocoPart
-from pose_augment import pose_to_img
+from pose_augment import *
 from pose_dataset import CocoPoseLMDB
 
 
@@ -37,5 +41,35 @@ def get_idx_hands_up():
     print('%d / %d' % (handup_cnt, total_cnt))
 
 
+def sample_augmentations():
+    ds = CocoPoseLMDB('/data/public/rw/coco-pose-estimation-lmdb/', is_train=False, only_idx=0)
+    ds = MapDataComponent(ds, pose_random_scale)
+    ds = MapDataComponent(ds, pose_rotation)
+    ds = MapDataComponent(ds, pose_flip)
+    ds = MapDataComponent(ds, pose_resize_shortestedge_random)
+    ds = MapDataComponent(ds, pose_crop_random)
+    ds = MapData(ds, pose_to_img)
+    augs = [
+        imgaug.RandomApplyAug(imgaug.RandomChooseAug([
+            imgaug.GaussianBlur(3),
+            imgaug.SaltPepperNoise(white_prob=0.01, black_prob=0.01),
+            imgaug.RandomOrderAug([
+                imgaug.BrightnessScale((0.8, 1.2), clip=False),
+                imgaug.Contrast((0.8, 1.2), clip=False),
+                # imgaug.Saturation(0.4, rgb=True),
+            ]),
+        ]), 0.7),
+    ]
+    ds = AugmentImageComponent(ds, augs)
+
+    ds.reset_state()
+    for l1, l2, l3 in ds.get_data():
+        CocoPoseLMDB.display_image(l1, l2, l3)
+
+
 if __name__ == '__main__':
-    get_idx_hands_up()
+    # codes for tests
+    # get_idx_hands_up()
+
+    # show augmentation samples
+    sample_augmentations()

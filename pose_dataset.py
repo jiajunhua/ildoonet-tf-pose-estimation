@@ -25,7 +25,6 @@ from pose_augment import pose_flip, pose_rotation, pose_to_img, pose_crop_random
     pose_resize_shortestedge_random, pose_resize_shortestedge_fixed, pose_crop_center, pose_random_scale
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(levelname)s %(message)s')
 
@@ -173,7 +172,6 @@ class CocoMetadata:
             vectormap[y][x][p*2+1] /= countmap[p][y][x]
 
         if target_size:
-            # vectormap = imresize(vectormap, target_size, 'lanczos')
             vectormap = cv2.resize(vectormap, target_size, interpolation=cv2.INTER_AREA)
 
         return vectormap
@@ -221,6 +219,7 @@ class CocoPoseLMDB(RNGDataFlow):
     def display_image(inp, heatmap, vectmap, as_numpy=False):
         if as_numpy:
             mpl.use('Agg')
+        import matplotlib.pyplot as plt
 
         fig = plt.figure()
         a = fig.add_subplot(2, 2, 1)
@@ -361,6 +360,8 @@ class DataFlowToQueue(threading.Thread):
         self._coord = None
         self._sess = None
 
+        self.last_dp = None
+
     @contextmanager
     def default_sess(self):
         if self._sess:
@@ -390,6 +391,7 @@ class DataFlowToQueue(threading.Thread):
                             for dp in self.ds.get_data():
                                 feed = dict(zip(self.placeholders, dp))
                                 self.op.run(feed_dict=feed)
+                                self.last_dp = dp
                     except (tf.errors.CancelledError, tf.errors.OutOfRangeError, DataFlowTerminated):
                         logging.error('err type1, placeholders={}'.format(self.placeholders))
                         sys.exit(-1)
@@ -414,10 +416,14 @@ class DataFlowToQueue(threading.Thread):
 
 
 if __name__ == '__main__':
+    import os
+    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
     from pose_augment import set_network_input_wh
     set_network_input_wh(368, 368)
-    df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', False)
-    # df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
+
+    # df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', False)
+    df = get_dataflow('/data/public/rw/coco-pose-estimation-lmdb/', True)
 
     # input_node = tf.placeholder(tf.float32, shape=(None, 368, 368, 3), name='image')
     with tf.Session() as sess:

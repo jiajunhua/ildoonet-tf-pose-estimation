@@ -11,12 +11,14 @@ Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
   - [x] Transfer Original Weights to Tensorflow
 
   - [x] Training Code with multi-gpus
-
-- [ ] Post processing from network output.
-
-  - [ ] Accurate Result
   
-  - [ ] Fast Computation
+  - [ ] Evaluate with test dataset
+
+- [ ] Inference
+
+  - [ ] Post processing from network output.
+
+  - [ ] Multi-Scale Inference
 
 - [ ] Faster network variants using mobilenet, lcnn architecture.
 
@@ -63,11 +65,11 @@ $ pip3 install -r requirements.txt
 
 ### Inference Time
 
-| Dataset | Model                             | Description                                                                     | Inference Time<br/>1 core cpu |
-|---------|--------------------------|------------------------------------------------------------------------------------------|---------------:|
-| Coco    | cmu                      | CMU's original version. Same network, same weights.                                      | 368x368 @ 10s<br/>320x240 @ 3.65s |
-| Coco    | dsconv                   | Same architecture as the cmu version except for<br/>the **depthwise separable convolution** of mobilenet. | 368x368 @ 1.1s<br/>320x240 @ 0.44s  |
-| Coco    | mobilenet                | Feature extraction layers is replaced from VGG to **Mobilenet** from Google                  | | |
+| Dataset | Model              | System               | Description                                                                                  | Inference Time |
+|---------|--------------------|----------------------|----------------------------------------------------------------------------------------------|---------------:|
+| Coco    | cmu                | 3.1 GHz i5 Dual Core | CMU's original version. Same network, same weights.                                          | 10s @ 368x368 <br/>3.65s @ 320x240 |
+| Coco    | dsconv             | 3.1 GHz i5 Dual Core | Same architecture as the cmu version except for<br/>the **depthwise separable convolution** of mobilenet. | 1.1s @ 368x368<br/> 0.44s @ 320x240 |
+| Coco    | mobilenet          | 3.1 GHz i5 Dual Core | Feature extraction layers is replaced from VGG to **Mobilenet** from Google                  | 0.2s @ 368x368 |
 
 * Test being processed. This will be updated soon.
 
