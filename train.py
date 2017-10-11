@@ -139,7 +139,7 @@ if __name__ == '__main__':
     global_step = tf.Variable(0, trainable=False)
     starter_learning_rate = args.lr
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                               decay_steps=20000, decay_rate=0.333, staircase=True)
+                                               decay_steps=10000, decay_rate=0.8, staircase=True)
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     # optimizer = tf.train.AdadeltaOptimizer(learning_rate)
     train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
