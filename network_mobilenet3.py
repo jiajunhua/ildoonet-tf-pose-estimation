@@ -29,7 +29,9 @@ class MobilenetNetwork(network_base.BaseNetwork):
              # .separable_conv(3, 3, depth(1024), 1, name='Conv2d_13')
              )
 
-        (self.feed('Conv2d_3', 'Conv2d_7', 'Conv2d_11')
+        (self.feed('Conv2d_3').max_pool(2, 2, 2, 2, name='Conv2d_3_pool'))
+
+        (self.feed('Conv2d_3_pool', 'Conv2d_7', 'Conv2d_11')
             .concat(3, name='feat_concat'))
 
         feature_lv = 'feat_concat'
