@@ -95,7 +95,7 @@ if __name__ == '__main__':
                 elif args.model == 'mobilenet_p_1.0':
                     from network_mobilenet3 import MobilenetNetwork
                     net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=1.0)
-                    pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
+                    pretrain_path = './models/pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
                     last_layer = 'MConv_Stage6_L{aux}_5'
                 elif args.model == 'mobilenet_p_0.50':
                     from network_mobilenet3 import MobilenetNetwork
