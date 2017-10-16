@@ -210,8 +210,6 @@ if __name__ == '__main__':
         with open('timeline.json', 'w') as f:
             f.write(ctf)
 
-        tf.train.write_graph(sess.graph_def, args.modelpath, 'graph.pb')
-
         logging.info('Training Started.')
         time_started = time.time()
         last_gs_num = last_gs_num2 = 0
@@ -275,7 +273,9 @@ if __name__ == '__main__':
                 file_writer.add_summary(summary, gs_num)
 
             if gs_num > 0 and gs_num % 2000 == 0:
+                tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-{}.pb'.format(global_step))
                 saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
 
+        tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-final.pb'.format(global_step))
         saver.save(sess, os.path.join(args.modelpath, 'model_final'), global_step=global_step)
     logging.info('optimization finished. %f' % (time.time() - time_started))
