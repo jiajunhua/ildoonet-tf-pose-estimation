@@ -264,6 +264,7 @@ if __name__ == '__main__':
                 sample_result = cv2.resize(sample_result, (640, 640))
                 sample_result = sample_result.reshape([1, 640, 640, 3]).astype(float)
 
+                # save summary
                 summary = sess.run(merged_validate_op, feed_dict={
                     valid_loss: average_loss / total_cnt,
                     valid_loss_ll: average_loss_ll / total_cnt,
@@ -272,8 +273,8 @@ if __name__ == '__main__':
                 })
                 file_writer.add_summary(summary, gs_num)
 
-            if gs_num > 0 and gs_num % 2000 == 0:
-                tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-{}.pb'.format(global_step))
+                # save weights
+                tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-{}.pb'.format(gs_num))
                 saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
 
         tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-final.pb'.format(global_step))
