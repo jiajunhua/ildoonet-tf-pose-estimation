@@ -210,6 +210,8 @@ if __name__ == '__main__':
         with open('timeline.json', 'w') as f:
             f.write(ctf)
 
+        tf.train.write_graph(sess.graph_def, args.modelpathl, 'graph.pb')
+
         logging.info('Training Started.')
         time_started = time.time()
         last_gs_num = last_gs_num2 = 0
