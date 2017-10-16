@@ -277,6 +277,6 @@ if __name__ == '__main__':
                 tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-{}.pb'.format(gs_num))
                 saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
 
-        tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-final.pb'.format(global_step))
+        tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-final.pb'.format(global_step), as_text=False)
         saver.save(sess, os.path.join(args.modelpath, 'model_final'), global_step=global_step)
     logging.info('optimization finished. %f' % (time.time() - time_started))
