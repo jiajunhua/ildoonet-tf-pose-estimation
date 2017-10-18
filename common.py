@@ -11,6 +11,10 @@ from scipy.ndimage.filters import maximum_filter, gaussian_filter
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
 
+regularizer_conv = 0.04
+regularizer_dsconv = 0.004
+
+
 class CocoPart(Enum):
     Nose = 0
     Neck = 1

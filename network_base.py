@@ -3,6 +3,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
+import common
+
 DEFAULT_PADDING = 'SAME'
 
 
@@ -141,6 +143,7 @@ class BaseNetwork(object):
                                                   activation_fn=None,
                                                   weights_initializer=tf.contrib.layers.xavier_initializer(),
                                                   # weights_initializer=tf.truncated_normal_initializer(stddev=0.09),
+                                                  weights_regularizer=tf.contrib.layers.l2_regularizer(0.00004),
                                                   biases_initializer=None,
                                                   padding=DEFAULT_PADDING,
                                                   scope=name + '_depthwise')
@@ -155,8 +158,8 @@ class BaseNetwork(object):
                                         biases_initializer=slim.init_ops.zeros_initializer(),
                                         normalizer_fn=slim.batch_norm,
                                         trainable=self.trainable,
-                                        # weights_regularizer=tf.contrib.layers.l2_regularizer(0.00004),
-                                        weights_regularizer=None,
+                                        weights_regularizer=tf.contrib.layers.l2_regularizer(common.regularizer_dsconv),
+                                        # weights_regularizer=None,
                                         scope=name + '_pointwise')
 
         return output
@@ -167,6 +170,7 @@ class BaseNetwork(object):
             output = slim.convolution2d(input, c_o, kernel_size=[k_h, k_w],
                                         stride=stride,
                                         normalizer_fn=slim.batch_norm,
+                                        weights_regularizer=tf.contrib.layers.l2_regularizer(common.regularizer_conv),
                                         scope=name)
         return output
 

@@ -29,6 +29,7 @@ if __name__ == '__main__':
     parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-mobilenet_1.0/')
     parser.add_argument('--logpath', type=str, default='/data/private/tf-openpose-log/')
     parser.add_argument('--checkpoint', type=str, default='')
+    parser.add_argument('--tag', type=str, default='')
     parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
 
     parser.add_argument('--input-width', type=int, default=368)
@@ -144,7 +145,7 @@ if __name__ == '__main__':
     global_step = tf.Variable(0, trainable=False)
     starter_learning_rate = args.lr
     learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                               decay_steps=10000, decay_rate=0.8, staircase=True)
+                                               decay_steps=50000, decay_rate=0.8, staircase=True)
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     # optimizer = tf.train.AdadeltaOptimizer(learning_rate)
     train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
@@ -187,11 +188,13 @@ if __name__ == '__main__':
             logging.info('Restore pretrained weights...Done')
 
         logging.info('prepare file writer')
-        training_name = '{}_batch:{}_lr:{}_gpus:{}'.format(
+        training_name = '{}_batch:{}_lr:{}_gpus:{}_{}x{}_{}'.format(
             args.model,
             args.batchsize,
             args.lr,
-            args.gpus
+            args.gpus,
+            args.input_width, args.input_height,
+            args.tag
         )
         file_writer = tf.summary.FileWriter(args.logpath + training_name, sess.graph)
 
@@ -209,6 +212,8 @@ if __name__ == '__main__':
         ctf = tl.generate_chrome_trace_format()
         with open('timeline.json', 'w') as f:
             f.write(ctf)
+
+        tf.train.write_graph(sess.graph_def, args.modelpath, 'graph.pb'.format(gs_num))
 
         logging.info('Training Started.')
         time_started = time.time()
@@ -274,9 +279,7 @@ if __name__ == '__main__':
                 file_writer.add_summary(summary, gs_num)
 
                 # save weights
-                tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-{}.pb'.format(gs_num))
                 saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
 
-        tf.train.write_graph(sess.graph_def, args.modelpath, 'graph-final.pb'.format(global_step), as_text=False)
         saver.save(sess, os.path.join(args.modelpath, 'model_final'), global_step=global_step)
     logging.info('optimization finished. %f' % (time.time() - time_started))
