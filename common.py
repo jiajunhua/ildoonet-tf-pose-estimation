@@ -13,6 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 
 regularizer_conv = 0.04
 regularizer_dsconv = 0.004
+batchnorm_fused = False
 
 
 class CocoPart(Enum):

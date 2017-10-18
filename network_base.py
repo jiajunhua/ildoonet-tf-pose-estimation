@@ -133,7 +133,7 @@ class BaseNetwork(object):
 
     @layer
     def separable_conv(self, input, k_h, k_w, c_o, stride, name, relu=True):
-        with slim.arg_scope([slim.batch_norm], fused=True):
+        with slim.arg_scope([slim.batch_norm], fused=common.batchnorm_fused):
             output = slim.separable_convolution2d(input,
                                                   num_outputs=None,
                                                   stride=stride,
@@ -166,7 +166,7 @@ class BaseNetwork(object):
 
     @layer
     def convb(self, input, k_h, k_w, c_o, stride, name):
-        with slim.arg_scope([slim.batch_norm], fused=True):
+        with slim.arg_scope([slim.batch_norm], fused=common.batchnorm_fused):
             output = slim.convolution2d(input, c_o, kernel_size=[k_h, k_w],
                                         stride=stride,
                                         normalizer_fn=slim.batch_norm,
