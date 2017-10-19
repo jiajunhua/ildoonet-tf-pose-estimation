@@ -19,8 +19,8 @@ def set_network_input_wh(w, h):
 
 
 def pose_random_scale(meta):
-    scalew = random.uniform(0.8, 1.2)
-    scaleh = random.uniform(0.8, 1.2)
+    scalew = random.uniform(0.8, 1.4)
+    scaleh = random.uniform(0.8, 1.4)
     neww = int(meta.width * scalew)
     newh = int(meta.height * scaleh)
     dst = cv2.resize(meta.img, (neww, newh), interpolation=cv2.INTER_AREA)

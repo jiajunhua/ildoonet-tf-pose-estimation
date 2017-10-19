@@ -16,7 +16,7 @@ import tensorflow as tf
 
 from tensorpack import imgaug
 from tensorpack.dataflow.image import MapDataComponent, AugmentImageComponent
-from tensorpack.dataflow.common import BatchData, MapData
+from tensorpack.dataflow.common import BatchData, MapData, TestDataSpeed
 from tensorpack.dataflow.prefetch import PrefetchData
 from tensorpack.dataflow.base import RNGDataFlow, DataFlowTerminated
 
@@ -112,14 +112,9 @@ class CocoMetadata:
         heatmap = heatmap.transpose((1, 2, 0))
 
         # background
-        height, width = heatmap.shape[:2]
-        for y in range(height):
-            for x in range(width):
-                maximum = max(heatmap[y][x])
-                heatmap[y][x][-1] = max(1.0 - maximum, 0.0)
+        heatmap[:, :, -1] = np.clip(1 - np.amax(heatmap, axis=2), 0.0, 1.0)
 
         if target_size:
-            # heatmap = imresize(heatmap, target_size, 'lanczos')
             heatmap = cv2.resize(heatmap, target_size, interpolation=cv2.INTER_AREA)
 
         return heatmap
@@ -144,7 +139,7 @@ class CocoMetadata:
                 exp = d / 2.0 / sigma / sigma
                 if exp > th:
                     continue
-                heatmap[plane_idx][y][x] += math.exp(-exp)
+                heatmap[plane_idx][y][x] = max(heatmap[plane_idx][y][x], math.exp(-exp))
                 heatmap[plane_idx][y][x] = min(heatmap[plane_idx][y][x], 1.0)
 
     def get_vectormap(self, target_size):
@@ -322,14 +317,11 @@ def get_dataflow(path, is_train):
         augs = [
             imgaug.RandomApplyAug(imgaug.RandomChooseAug([
                 imgaug.SaltPepperNoise(white_prob=0.01, black_prob=0.01),
-                imgaug.RandomOrderAug([
-                    imgaug.BrightnessScale((0.8, 1.2), clip=False),
-                    imgaug.Contrast((0.8, 1.2), clip=False),
-                    # imgaug.Saturation(0.4, rgb=True),
-                ]),
+                imgaug.BrightnessScale((0.8, 1.2), clip=False),
+                imgaug.Contrast((0.8, 1.2), clip=False),
             ]), 0.7),
         ]
-        ds = AugmentImageComponent(ds, augs)
+        # ds = AugmentImageComponent(ds, augs)
     else:
         ds = MapDataComponent(ds, pose_resize_shortestedge_fixed)
         ds = MapDataComponent(ds, pose_crop_center)
