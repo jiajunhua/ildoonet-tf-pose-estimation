@@ -316,12 +316,12 @@ def get_dataflow(path, is_train):
         ds = MapData(ds, pose_to_img)
         augs = [
             imgaug.RandomApplyAug(imgaug.RandomChooseAug([
-                imgaug.SaltPepperNoise(white_prob=0.01, black_prob=0.01),
-                imgaug.BrightnessScale((0.8, 1.2), clip=False),
-                imgaug.Contrast((0.8, 1.2), clip=False),
+                imgaug.BrightnessScale((0.6, 1.4), clip=False),
+                imgaug.Contrast((0.7, 1.4), clip=False),
+                imgaug.GaussianBlur(max_size=3)
             ]), 0.7),
         ]
-        # ds = AugmentImageComponent(ds, augs)
+        ds = AugmentImageComponent(ds, augs)
     else:
         ds = MapDataComponent(ds, pose_resize_shortestedge_fixed)
         ds = MapDataComponent(ds, pose_crop_center)

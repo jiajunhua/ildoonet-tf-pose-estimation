@@ -44,17 +44,18 @@ if __name__ == '__main__':
     output_w = args.input_width // 8
     output_h = args.input_height // 8
 
-    input_node = tf.placeholder(tf.float32, shape=(args.batchsize, args.input_height, args.input_width, 3), name='image')
-    vectmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 38), name='vectmap')
-    heatmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 19), name='heatmap')
+    with tf.device(tf.DeviceSpec(device_type="GPU", device_index=0)):
+        input_node = tf.placeholder(tf.float32, shape=(args.batchsize, args.input_height, args.input_width, 3), name='image')
+        vectmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 38), name='vectmap')
+        heatmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 19), name='heatmap')
 
-    # prepare data
-    if not args.remote_data:
-        df = get_dataflow_batch(args.datapath, True, args.batchsize)
-    else:
-        df = RemoteDataZMQ(args.remote_data, hwm=5)
-    enqueuer = DataFlowToQueue(df, [input_node, heatmap_node, vectmap_node], queue_size=100)
-    q_inp, q_heat, q_vect = enqueuer.dequeue()
+        # prepare data
+        if not args.remote_data:
+            df = get_dataflow_batch(args.datapath, True, args.batchsize)
+        else:
+            df = RemoteDataZMQ(args.remote_data, hwm=5)
+        enqueuer = DataFlowToQueue(df, [input_node, heatmap_node, vectmap_node], queue_size=100)
+        q_inp, q_heat, q_vect = enqueuer.dequeue()
 
     df_valid = get_dataflow_batch(args.datapath, False, args.batchsize)
     df_valid.reset_state()
@@ -123,36 +124,37 @@ if __name__ == '__main__':
                     vectmap_losses[idx].append(l1)
                     heatmap_losses[idx].append(l2)
 
-    # define loss
-    losses = []
-    for l1_idx, l1 in enumerate(vectmap_losses):
-        l1_concat = tf.concat(l1, axis=0)
-        loss = tf.nn.l2_loss(l1_concat - q_vect, name='loss_l1_stage%d' % l1_idx)
-        losses.append(loss)
-    for l2_idx, l2 in enumerate(heatmap_losses):
-        l2_concat = tf.concat(l2, axis=0)
-        loss = tf.nn.l2_loss(l2_concat - q_heat, name='loss_l2_stage%d' % l2_idx)
-        losses.append(loss)
+    with tf.device(tf.DeviceSpec(device_type="GPU", device_index=gpu_id)):
+        # define loss
+        losses = []
+        for l1_idx, l1 in enumerate(vectmap_losses):
+            l1_concat = tf.concat(l1, axis=0)
+            loss = tf.nn.l2_loss(l1_concat - q_vect, name='loss_l1_stage%d' % l1_idx)
+            losses.append(loss)
+        for l2_idx, l2 in enumerate(heatmap_losses):
+            l2_concat = tf.concat(l2, axis=0)
+            loss = tf.nn.l2_loss(l2_concat - q_heat, name='loss_l2_stage%d' % l2_idx)
+            losses.append(loss)
 
-    output_vectmap = tf.concat(output_vectmap, axis=0)
-    output_heatmap = tf.concat(output_heatmap, axis=0)
-    total_loss = tf.reduce_mean(losses)
-    total_loss_ll_paf = tf.reduce_mean(tf.nn.l2_loss(output_vectmap - q_vect))
-    total_loss_ll_heat = tf.reduce_mean(tf.nn.l2_loss(output_heatmap - q_heat))
-    total_ll_loss = tf.reduce_mean([total_loss_ll_paf, total_loss_ll_heat])
+        output_vectmap = tf.concat(output_vectmap, axis=0)
+        output_heatmap = tf.concat(output_heatmap, axis=0)
+        total_loss = tf.reduce_mean(losses)
+        total_loss_ll_paf = tf.reduce_mean(tf.nn.l2_loss(output_vectmap - q_vect))
+        total_loss_ll_heat = tf.reduce_mean(tf.nn.l2_loss(output_heatmap - q_heat))
+        total_ll_loss = tf.reduce_mean([total_loss_ll_paf, total_loss_ll_heat])
 
-    # define optimizer
-    step_per_epoch = 121745 // args.batchsize
-    global_step = tf.Variable(0, trainable=False)
-    if ',' not in args.lr:
-        starter_learning_rate = float(args.lr)
-        learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                                   decay_steps=50000, decay_rate=0.8, staircase=True)
-    else:
-        lrs = [float(x) for x in args.lr.split(',')]
-        boundaries = [step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0]
-        learning_rate = tf.train.piecewise_constant(global_step, boundaries, lrs)
-
+        # define optimizer
+        step_per_epoch = 121745 // args.batchsize
+        global_step = tf.Variable(0, trainable=False)
+        if ',' not in args.lr:
+            starter_learning_rate = float(args.lr)
+            learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
+                                                       decay_steps=50000, decay_rate=0.8, staircase=True)
+        else:
+            lrs = [float(x) for x in args.lr.split(',')]
+            boundaries = [step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0]
+            learning_rate = tf.train.piecewise_constant(global_step, boundaries, lrs)
+    
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     # optimizer = tf.train.AdadeltaOptimizer(learning_rate)
     train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
