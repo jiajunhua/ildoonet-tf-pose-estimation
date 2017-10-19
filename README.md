@@ -26,8 +26,6 @@ Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
   
   - [ ] Mobilenet Version
   
-  - [ ] LCNN Version
-
 - [ ] Demos
 
   - [ ] Realtime Webcam Demo
