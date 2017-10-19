@@ -104,6 +104,11 @@ if __name__ == '__main__':
                     net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.75)
                     pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
                     last_layer = 'MConv_Stage6_L{aux}_5'
+                elif args.model == 'mobilenet_p_0.75_0.50':
+                    from network_mobilenet3 import MobilenetNetwork
+                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.75, conv_width2=0.50)
+                    pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
+                    last_layer = 'MConv_Stage6_L{aux}_5'
                 elif args.model == 'mobilenet_p_0.50':
                     from network_mobilenet3 import MobilenetNetwork
                     net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.50)
@@ -154,7 +159,7 @@ if __name__ == '__main__':
             lrs = [float(x) for x in args.lr.split(',')]
             boundaries = [step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0]
             learning_rate = tf.train.piecewise_constant(global_step, boundaries, lrs)
-    
+
     optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     # optimizer = tf.train.AdadeltaOptimizer(learning_rate)
     train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
