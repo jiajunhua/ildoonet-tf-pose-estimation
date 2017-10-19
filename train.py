@@ -240,7 +240,7 @@ if __name__ == '__main__':
             if gs_num > step_per_epoch * args.max_epoch:
                 break
 
-            if gs_num == initial_gs_num + 1 or gs_num - last_gs_num >= 100:
+            if gs_num - last_gs_num >= 100:
                 train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, lr_val, summary, queue_size = sess.run([total_loss, total_ll_loss, total_loss_ll_paf, total_loss_ll_heat, learning_rate, merged_summary_op, enqueuer.size()])
 
                 # log of training loss / accuracy
