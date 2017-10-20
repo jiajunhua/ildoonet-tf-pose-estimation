@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import timeline
 
+from common import read_imgfile
 from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
 from pose_augment import set_network_input_wh
@@ -63,10 +64,9 @@ if __name__ == '__main__':
     for images_test, heatmaps, vectmaps in df_valid.get_data():
         validation_cache.append((images_test, heatmaps, vectmaps))
 
-    val_image = cv2.imread('./images/person1.jpg')
-    val_image = cv2.resize(val_image, (args.input_width, args.input_height))
-    val_image = val_image.astype(float)
-    val_image = val_image * (2.0 / 255.0) - 1.0
+    val_image = read_imgfile('./images/person1.jpg', args.input_width, args.input_height)
+    val_image2 = read_imgfile('./images/person2.jpg', args.input_width, args.input_height)
+    val_image3 = read_imgfile('./images/person3.jpg', args.input_width, args.input_height)
 
     # define model for multi-gpu
     q_inp_split = tf.split(q_inp, args.gpus)
@@ -176,11 +176,15 @@ if __name__ == '__main__':
     valid_loss_ll = tf.placeholder(tf.float32, shape=[])
     sample_train = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
     sample_valid = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
+    sample_valid2 = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
+    sample_valid3 = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
     train_img = tf.summary.image('training sample', sample_train, 1)
     valid_img = tf.summary.image('validation sample', sample_valid, 1)
+    valid_img2 = tf.summary.image('validation sample2', sample_valid2, 1)
+    valid_img3 = tf.summary.image('validation sample3', sample_valid3, 1)
     valid_loss_t = tf.summary.scalar("loss_valid", valid_loss)
     valid_loss_ll_t = tf.summary.scalar("loss_valid_lastlayer", valid_loss_ll)
-    merged_validate_op = tf.summary.merge([train_img, valid_img, valid_loss_t, valid_loss_ll_t])
+    merged_validate_op = tf.summary.merge([train_img, valid_img, valid_img2, valid_img3, valid_loss_t, valid_loss_ll_t])
 
     saver = tf.train.Saver(max_to_keep=100)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -272,21 +276,31 @@ if __name__ == '__main__':
                     [
                         net.get_output(name=last_layer.format(aux=1)),
                         net.get_output(name=last_layer.format(aux=2))
-                    ], feed_dict={q_inp: np.array([val_image, sample_image]*(args.batchsize // 2))}
+                    ], feed_dict={q_inp: np.array([sample_image, val_image, val_image2, val_image3]*(args.batchsize // 4))}
                 )
-                test_result = CocoPoseLMDB.display_image(val_image, heatMat[0], pafMat[0], as_numpy=True)
+                sample_result = CocoPoseLMDB.display_image(sample_image, heatMat[0], pafMat[0], as_numpy=True)
+                sample_result = cv2.resize(sample_result, (640, 640))
+                sample_result = sample_result.reshape([1, 640, 640, 3]).astype(float)
+
+                test_result = CocoPoseLMDB.display_image(val_image, heatMat[1], pafMat[1], as_numpy=True)
                 test_result = cv2.resize(test_result, (640, 640))
                 test_result = test_result.reshape([1, 640, 640, 3]).astype(float)
 
-                sample_result = CocoPoseLMDB.display_image(sample_image, heatMat[1], pafMat[1], as_numpy=True)
-                sample_result = cv2.resize(sample_result, (640, 640))
-                sample_result = sample_result.reshape([1, 640, 640, 3]).astype(float)
+                test_result2 = CocoPoseLMDB.display_image(val_image2, heatMat[2], pafMat[2], as_numpy=True)
+                test_result2 = cv2.resize(test_result2, (640, 640))
+                test_result2 = test_result2.reshape([1, 640, 640, 3]).astype(float)
+
+                test_result3 = CocoPoseLMDB.display_image(val_image3, heatMat[3], pafMat[3], as_numpy=True)
+                test_result3 = cv2.resize(test_result3, (640, 640))
+                test_result3 = test_result3.reshape([1, 640, 640, 3]).astype(float)
 
                 # save summary
                 summary = sess.run(merged_validate_op, feed_dict={
                     valid_loss: average_loss / total_cnt,
                     valid_loss_ll: average_loss_ll / total_cnt,
                     sample_valid: test_result,
+                    sample_valid2: test_result2,
+                    sample_valid3: test_result3,
                     sample_train: sample_result
                 })
                 file_writer.add_summary(summary, gs_num)

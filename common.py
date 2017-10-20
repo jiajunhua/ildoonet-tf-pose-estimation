@@ -6,6 +6,7 @@ import logging
 import numpy as np
 import itertools
 import tensorflow as tf
+import cv2
 from scipy.ndimage.filters import maximum_filter, gaussian_filter
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -188,3 +189,11 @@ def get_score(x1, y1, x2, y2, pafMatX, pafMatY):
     thidxs = local_scores > Inter_Threashold
 
     return sum(local_scores * thidxs), sum(thidxs)
+
+
+def read_imgfile(path, width, height):
+    val_image = cv2.imread(path)
+    val_image = cv2.resize(val_image, (width, height))
+    val_image = val_image.astype(float)
+    val_image = val_image * (2.0 / 255.0) - 1.0
+    return val_image
