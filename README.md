@@ -75,6 +75,13 @@ $ pip3 install -r requirements.txt
 
 ### Dataset
 
+You should download the dataset in LMDB format provided by CMU. See : https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/training/get_lmdb.sh
+
+```
+$ wget -nc --directory-prefix=lmdb_trainVal/ 		http://posefs1.perception.cs.cmu.edu/Users/ZheCao/lmdb_trainVal/data.mdb
+$ wget -nc --directory-prefix=lmdb_trainVal/ 		http://posefs1.perception.cs.cmu.edu/Users/ZheCao/lmdb_trainVal/lock.mdb
+```
+
 ### Augmentation
 
 CMU Perceptual Computing Lab has modified Caffe to provide data augmentation. See : https://github.com/CMU-Perceptual-Computing-Lab/caffe_train
