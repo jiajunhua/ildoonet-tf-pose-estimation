@@ -66,6 +66,7 @@ $ pip3 install -r requirements.txt
 - cmu 
   - the model based VGG pretrained network which described in the original paper.
   - I converted Weights in Caffe format to use in tensorflow.
+  - [weight download](https://www.dropbox.com/s/xh5s7sb7remu8tx/openpose_coco.npy?dl=0)
   
 - dsconv
   - Same architecture as the cmu version except for<br/>the **depthwise separable convolution** of mobilenet.
@@ -75,7 +76,7 @@ $ pip3 install -r requirements.txt
   - Based on the mobilenet paper, 12 convolutional layers are used as feature-extraction layers.
   - To improve on small person, **minor modification** on the architecture have been made.
   - Three models were learned according to network size parameters.
-    - mobilenet [download](https://www.dropbox.com/s/izh6a3xsn7pdxd0/mobilenet_0.75_0.50_model-146000.zip?dl=0)
+    - mobilenet : [weight download](https://www.dropbox.com/s/izh6a3xsn7pdxd0/mobilenet_0.75_0.50_model-146000.zip?dl=0)
     - mobilenet_fast
     - mobilenet_accurate
   - I published models which is not the best ones, but you can test them before you trained a model from the scratch.
