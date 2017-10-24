@@ -1,6 +1,6 @@
 # tf-openpose
 
-Openpose from CMU implemented using Tensorflow. It also provides several variants that have made some changes to the network structure for **real-time processing on the CPU.**
+'Openpose' for human pose estimation have been implemented using Tensorflow. It also provides several variants that have made some changes to the network structure for **real-time processing on the CPU or low-power embedded devices.**
 
 Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
