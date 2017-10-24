@@ -16,15 +16,17 @@ Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
 - [ ] Inference
 
-  - [ ] Post processing from network output.
+  - [x] Post processing from network output.
+
+  - [ ] Faster post-processing
 
   - [ ] Multi-Scale Inference
 
-- [ ] Faster network variants using mobilenet, lcnn architecture.
+- [x] Faster network variants using custom mobilenet architecture.
 
   - [x] Depthwise Separable Convolution Version
   
-  - [ ] Mobilenet Version
+  - [x] Mobilenet Version
   
 - [ ] Demos
 
@@ -61,15 +63,37 @@ $ pip3 install -r requirements.txt
 
 ## Models
 
+- cmu 
+  - the model based VGG pretrained network which described in the original paper.
+  - I converted Weights in Caffe format to use in tensorflow.
+  
+- dsconv
+  - Same architecture as the cmu version except for<br/>the **depthwise separable convolution** of mobilenet.
+  - I trained it using 'transfer learning', but it provides not-enough speed and accuracy.
+  
+- mobilenet
+  - Based on the mobilenet paper, 12 convolutional layers are used as feature-extraction layers.
+  - To improve on small person, **minor modification** on the architecture have been made.
+  - Three models were learned according to network size parameters.
+    - mobilenet
+    - mobilenet_fast
+    - mobilenet_accurate
+
 ### Inference Time
 
-| Dataset | Model              | System               | Description                                                                                  | Inference Time |
-|---------|--------------------|----------------------|----------------------------------------------------------------------------------------------|---------------:|
-| Coco    | cmu                | 3.1 GHz i5 Dual Core | CMU's original version. Same network, same weights.                                          | 10s @ 368x368 <br/>3.65s @ 320x240 |
-| Coco    | dsconv             | 3.1 GHz i5 Dual Core | Same architecture as the cmu version except for<br/>the **depthwise separable convolution** of mobilenet. | 1.1s @ 368x368<br/> 0.44s @ 320x240 |
-| Coco    | mobilenet          | 3.1 GHz i5 Dual Core | Feature extraction layers is replaced from VGG to **Mobilenet** from Google                  | 0.2s @ 368x368 |
+#### Macbook Pro - 3.1GHz i5 Dual Core
 
-* Test being processed. This will be updated soon.
+| Dataset | Model              | Inference Time  |
+|---------|--------------------|----------------:|
+| Coco    | cmu                | 10.0s @ 368x368 |
+| Coco    | dsconv             | 1.10s @ 368x368 |
+| Coco    | mobilenet_accurate | 0.40s @ 368x368 |
+| Coco    | mobilenet          | 0.24s @ 368x368 |
+| Coco    | mobilenet_fast     | 0.16s @ 368x368 |
+
+#### Jetson TX2
+
+On embedded GPU Board from Nvidia, Test results are as below.
 
 ## Training
 
@@ -109,7 +133,7 @@ worker-node3$ python3 pose_dataworker.py --master=tcp://host:port
 ...
 ```
 
-After above preparation, you can launch training script with special arguments.
+After above preparation, you can launch training script with 'remote-data' arguments.
 
 ```
 $ python3 train.py --remote-data=tcp://0.0.0.0:port
@@ -125,7 +149,38 @@ $ python3 train.py --remote-data=tcp://0.0.0.0:port --gpus=8
 2017-09-27 15:58:50,307 INFO Restore pretrained weights...
 ```
 
-I trained models within a day with 8 gpus and multiple preprocessing nodes with 48 core cpus.
+I trained models within a day with 8 gpus and multiple pre-processing nodes with 48 core cpus.
+
+### Model Optimization for Inference
+
+After trained a model, I optimized models by folding batch normalization to convolutional layers and removing redundant operations.  
+
+Firstly, the model should be frozen.
+
+```bash
+$ python3 -m tensorflow.python.tools.freeze_graph \
+  --input_graph=... \
+  --output_graph=... \
+  --input_checkpoint=... \
+  --output_node_names="Openpose/concat_stage7"
+```
+
+And the optimization can be performed on the frozen model via graph transform provided by tensorflow. 
+
+```bash
+$ bazel build tensorflow/tools/graph_transforms:transform_graph
+$ bazel-bin/tensorflow/tools/graph_transforms/transform_graph \
+    --in_graph=... \
+    --out_graph=... \
+    --inputs='image:0' \
+    --outputs='Openpose/concat_stage7:0' \
+    --transforms='
+    strip_unused_nodes(type=float, shape="1,368,368,3")
+    remove_nodes(op=Identity, op=CheckNumerics)
+    fold_constants(ignoreError=False)
+    fold_old_batch_norms
+    fold_batch_norms'
+```
 
 ## References
 
@@ -137,6 +192,8 @@ I trained models within a day with 8 gpus and multiple preprocessing nodes with 
 
 [3] Custom Caffe by Openpose : https://github.com/CMU-Perceptual-Computing-Lab/caffe_train
 
+[4] Keras Openpose : https://github.com/michalfaber/keras_Realtime_Multi-Person_Pose_Estimation
+
 ### Mobilenet
 
 [1] Original Paper : https://arxiv.org/abs/1704.04861
@@ -146,3 +203,9 @@ I trained models within a day with 8 gpus and multiple preprocessing nodes with 
 ### Libraries
 
 [1] Tensorpack : https://github.com/ppwwyyxx/tensorpack
+
+### Tensorflow Tips
+
+[1] Freeze graph : https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py
+
+[2] Optimize graph : https://codelabs.developers.google.com/codelabs/tensorflow-for-poets-2

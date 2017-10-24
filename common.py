@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 
 regularizer_conv = 0.04
 regularizer_dsconv = 0.004
-batchnorm_fused = False
+batchnorm_fused = True
 
 
 class CocoPart(Enum):
@@ -48,7 +48,11 @@ CocoPairsNetwork = [
     (6, 7), (8, 9), (10, 11), (28, 29), (30, 31), (34, 35), (32, 33), (36, 37), (18, 19), (26, 27)
  ]  # = 19
 
-NMS_Threshold = 0.1
+CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
+              [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
+              [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
+
+NMS_Threshold = 0.05
 InterMinAbove_Threshold = 4
 Inter_Threashold = 0.05
 Min_Subset_Cnt = 3
@@ -71,15 +75,19 @@ def estimate_pose(heatMat, pafMat):
     # reliability issue.
     logging.debug('preprocess')
     heatMat = heatMat - heatMat.min(axis=1).min(axis=1).reshape(19, 1, 1)
+    heatMat = heatMat - heatMat.min(axis=2).reshape(19, 46, 1)
 
-    logging.debug('nms')
+    _NMS_Threshold = max(np.average(heatMat) * 4.0, NMS_Threshold)
+    _NMS_Threshold = min(_NMS_Threshold, 0.3)
+
+    logging.debug('nms, th=%f' % _NMS_Threshold)
     # heatMat = gaussian_filter(heatMat, sigma=0.5)
     coords = []
-    for plain in heatMat:
-        nms = non_max_suppression(plain, 5, NMS_Threshold)
-        coords.append(np.where(nms >= NMS_Threshold))
+    for plain in heatMat[:-1]:
+        nms = non_max_suppression(plain, 5, _NMS_Threshold)
+        coords.append(np.where(nms >= _NMS_Threshold))
 
-    logging.debug('estimate_pose1')
+    logging.debug('estimate_pose1 : estimate pairs')
     connection_all = []
     for (idx1, idx2), (paf_x_idx, paf_y_idx) in zip(CocoPairs, CocoPairsNetwork):
         connection = estimate_pose_pair(coords, idx1, idx2, pafMat[paf_x_idx], pafMat[paf_y_idx])
@@ -171,8 +179,8 @@ def get_score(x1, y1, x2, y2, pafMatX, pafMatY):
 
     xs = np.arange(x1, x2, dx / __num_inter_f) if x1 != x2 else np.full((__num_inter, ), x1)
     ys = np.arange(y1, y2, dy / __num_inter_f) if y1 != y2 else np.full((__num_inter, ), y1)
-    xs = (xs + 0.5).astype(np.int16)
-    ys = (ys + 0.5).astype(np.int16)
+    xs = (xs + 0.5).astype(np.int8)
+    ys = (ys + 0.5).astype(np.int8)
 
     # without vectorization
     pafXs = np.zeros(__num_inter)
@@ -193,7 +201,11 @@ def get_score(x1, y1, x2, y2, pafMatX, pafMatY):
 
 def read_imgfile(path, width, height):
     val_image = cv2.imread(path)
-    val_image = cv2.resize(val_image, (width, height))
+    return preprocess(val_image, width, height)
+
+
+def preprocess(img, width, height):
+    val_image = cv2.resize(img, (width, height))
     val_image = val_image.astype(float)
     val_image = val_image * (2.0 / 255.0) - 1.0
     return val_image
