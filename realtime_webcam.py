@@ -76,18 +76,17 @@ if __name__ == '__main__':
         elif args.model == 'mobilenet_accurate':
             net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=1.0)
             loader = tf.train.Saver()
-            loader.restore(sess, '/Users/ildoonet/Downloads/best_mobilenet_p_1.0/model-26000')
+            loader.restore(sess, './models/trained/mobilenet_accurate/model-170000')
             last_layer = 'MConv_Stage{stage}_L{aux}_5'
         elif args.model == 'mobilenet_fast':
             net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=0.5)
             loader = tf.train.Saver()
-            # loader.restore(sess, '/Users/ildoonet/Downloads/openpose-mobilenet_0.50/model-67000')
-            loader.restore(sess, '/Users/ildoonet/Downloads/openpose-mobilenet_0.50/model-163000')
+            loader.restore(sess, './models/trained/mobilenet_fast/model-163000')
             last_layer = 'MConv_Stage{stage}_L{aux}_5'
         elif args.model == 'mobilenet':
             net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=0.75, conv_width2=0.50)
             loader = tf.train.Saver()
-            loader.restore(sess, '/Users/ildoonet/Downloads/openpose-mobilenet_0.75_0.50/model-217003')
+            loader.restore(sess, './models/trained/mobilenet/model-241003')
             last_layer = 'MConv_Stage{stage}_L{aux}_5'
         else:
             raise Exception('Invalid Mode.')

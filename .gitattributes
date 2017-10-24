@@ -1,2 +1,2 @@
-models/numpy/* filter=lfs diff=lfs merge=lfs -text
+models/numpy/*.npy filter=lfs diff=lfs merge=lfs -text
 *.ckpt* filter=lfs diff=lfs merge=lfs -text

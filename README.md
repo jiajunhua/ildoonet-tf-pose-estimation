@@ -4,6 +4,10 @@ Openpose from CMU implemented using Tensorflow. It also provides several variant
 
 Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
+| CMU's Original Model</br> on Macbook Pro 15" | Mobilenet Variant </br>on Macbook Pro 15" | Mobilenet Variant</br>on Jetson TK2 |
+|---------|--------------------|----------------|
+| ![cmu-model](/etcs/openpose_macbook_cmu.gif)     | ![mb-model-macbook](/etcs/openpose_macbook_mobilenet.gif)  | ![mb-model-tx2](/etcs/openpose_tx2_mobilenet.gif) |
+
 **Features**
 
 - [x] CMU's original network architecture and weights.
@@ -30,9 +34,11 @@ Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
   
 - [ ] Demos
 
-  - [ ] Realtime Webcam Demo
+  - [x] Realtime Webcam Demo
   
-  - [ ] Image/Video File Demo
+  - [x] Image File Demo
+  
+  - [ ] Video File Demo
 
 - [ ] ROS Support. 
 
@@ -57,7 +63,6 @@ You need dependencies below.
 ```bash
 $ git clone https://www.github.com/ildoonet/tf-openpose
 $ cd tf-openpose
-$ git lfs pull
 $ pip3 install -r requirements.txt
 ```
 
@@ -96,6 +101,15 @@ $ pip3 install -r requirements.txt
 #### Jetson TX2
 
 On embedded GPU Board from Nvidia, Test results are as below.
+
+| Dataset | Model              | Inference Time  |
+|---------|--------------------|----------------:|
+| Coco    | cmu                | OOM   @ 368x368 |
+| Coco    | mobilenet_accurate | 0.18s @ 368x368 |
+| Coco    | mobilenet          | 0.10s @ 368x368 |
+| Coco    | mobilenet_fast     | 0.07s @ 368x368 |
+
+CMU's original model can not be executed due to 'out of memory' on '368x368' size.
 
 ## Training
 
