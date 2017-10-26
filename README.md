@@ -86,7 +86,8 @@ $ pip3 install -r requirements.txt
   - Based on the mobilenet paper, 12 convolutional layers are used as feature-extraction layers.
   - To improve on small person, **minor modification** on the architecture have been made.
   - Three models were learned according to network size parameters.
-    - mobilenet : [weight download](https://www.dropbox.com/s/izh6a3xsn7pdxd0/mobilenet_0.75_0.50_model-146000.zip?dl=0)
+    - mobilenet
+      - 368x368 : [weight download](https://www.dropbox.com/s/09xivpuboecge56/mobilenet_0.75_0.50_model-388003.zip?dl=0)
     - mobilenet_fast
     - mobilenet_accurate
   - I published models which is not the best ones, but you can test them before you trained a model from the scratch.
