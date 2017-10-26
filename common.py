@@ -75,7 +75,7 @@ def estimate_pose(heatMat, pafMat):
     # reliability issue.
     logging.debug('preprocess')
     heatMat = heatMat - heatMat.min(axis=1).min(axis=1).reshape(19, 1, 1)
-    heatMat = heatMat - heatMat.min(axis=2).reshape(19, 46, 1)
+    heatMat = heatMat - heatMat.min(axis=2).reshape(19, heatMat.shape[1], 1)
 
     _NMS_Threshold = max(np.average(heatMat) * 4.0, NMS_Threshold)
     _NMS_Threshold = min(_NMS_Threshold, 0.3)
