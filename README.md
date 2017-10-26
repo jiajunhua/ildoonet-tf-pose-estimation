@@ -6,7 +6,7 @@
 
 Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
-| CMU's Original Model</br> on Macbook Pro 15" | Mobilenet Variant </br>on Macbook Pro 15" | Mobilenet Variant </br>on Macbook Pro 15" | Mobilenet Variant</br>on Jetson TK2 |
+| CMU's Original Model</br> on Macbook Pro 15" | Mobilenet Variant </br>on Macbook Pro 15" | Mobilenet Variant </br>on Macbook Pro 13" | Mobilenet Variant</br>on Jetson TK2 |
 |:---------|:--------------------|:----------------|:----------------|
 | ![cmu-model](/etcs/openpose_macbook_cmu.gif)     | ![mb-model-macbook](/etcs/openpose_macbook_mobilenet.gif) | ![mb-model-macbook](/etcs/openpose_macbook13_mobilenet.gif) | ![mb-model-tx2](/etcs/openpose_tx2_mobilenet3.gif) |
 | **~0.6 FPS** | **~4.2 FPS** @ 368x368 | **~5.5 FPS** @ 384x216 | **~10 FPS** @ 368x368 |
