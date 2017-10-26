@@ -8,10 +8,8 @@ import argparse
 
 from tensorflow.python.client import timeline
 
-from network_cmu import CmuNetwork
 from common import estimate_pose, CocoPairsRender, read_imgfile, CocoColors
-from network_dsconv import DSConvNetwork
-from network_mobilenet import MobilenetNetwork
+from networks import get_network
 from pose_dataset import CocoPoseLMDB
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -34,27 +32,7 @@ if __name__ == '__main__':
     input_node = tf.placeholder(tf.float32, shape=(1, args.input_height, args.input_width, 3), name='image')
 
     with tf.Session(config=config) as sess:
-        if args.model == 'cmu':
-            net = CmuNetwork({'image': input_node}, trainable=False)
-            net.load('./models/numpy/openpose_coco.npy', sess)
-            last_layer = 'Mconv7_stage{stage}_L{aux}'
-        elif args.model == 'mobilenet_accurate':
-            net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=1.0)
-            loader = tf.train.Saver()
-            loader.restore(sess, './models/trained/mobilenet_accurate/model-170000')
-            last_layer = 'MConv_Stage{stage}_L{aux}_5'
-        elif args.model == 'mobilenet_fast':
-            net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=0.5)
-            loader = tf.train.Saver()
-            loader.restore(sess, './models/trained/mobilenet_fast/model-163000')
-            last_layer = 'MConv_Stage{stage}_L{aux}_5'
-        elif args.model == 'mobilenet':
-            net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=0.75, conv_width2=0.50)
-            loader = tf.train.Saver()
-            loader.restore(sess, './models/trained/mobilenet/model-241003')
-            last_layer = 'MConv_Stage{stage}_L{aux}_5'
-        else:
-            raise Exception('Invalid Mode.')
+        net, _, last_layer = get_network(args.model, input_node, sess)
 
         logging.debug('read image+')
         image = read_imgfile(args.imgpath, args.input_width, args.input_height)
@@ -122,7 +100,7 @@ if __name__ == '__main__':
                 center2 = (int((part['c2'][0] + 0.5) * image_w / heat_w), int((part['c2'][1] + 0.5) * image_h / heat_h))
                 cv2.circle(image, center1, 3, part['partIdx'][0], thickness=3, lineType=8, shift=0)
                 cv2.circle(image, center2, 3, part['partIdx'][1], thickness=3, lineType=8, shift=0)
-                image = cv2.line(image, center1, center2, CocoColors[part_idx], 1)
+                image = cv2.line(image, center1, center2, CocoColors[part_idx % len(CocoColors)], 1)
 
         scale = 480.0 / image_h
         newh, neww = 480, int(scale * image_w + 0.5)

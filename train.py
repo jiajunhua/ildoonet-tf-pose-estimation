@@ -12,6 +12,7 @@ from tensorflow.python.client import timeline
 from common import read_imgfile
 from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
+from networks import get_network
 from pose_augment import set_network_input_wh
 from pose_dataset import get_dataflow_batch, DataFlowToQueue, CocoPoseLMDB
 from tensorpack.dataflow.remote import send_dataflow_zmq, RemoteDataZMQ
@@ -21,7 +22,7 @@ logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(le
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training codes for Openpose using Tensorflow')
-    parser.add_argument('--model', default='mobilenet_1.0', help='model name')
+    parser.add_argument('--model', default='mobilenet', help='model name')
     parser.add_argument('--datapath', type=str, default='/data/public/rw/coco-pose-estimation-lmdb/')
     parser.add_argument('--batchsize', type=int, default=10)
     parser.add_argument('--gpus', type=int, default=1)
@@ -78,40 +79,7 @@ if __name__ == '__main__':
     for gpu_id in range(args.gpus):
         with tf.device(tf.DeviceSpec(device_type="GPU", device_index=gpu_id)):
             with tf.variable_scope(tf.get_variable_scope(), reuse=(gpu_id > 0)):
-                if args.model == 'mobilenet_1.0':
-                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=1.0)
-                    pretrain_path = './models/pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
-                    last_layer = 'MConv_Stage6_L{aux}_5'
-                elif args.model == 'mobilenet_0.75':
-                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.75)
-                    pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
-                    last_layer = 'MConv_Stage6_L{aux}_5'
-                elif args.model == 'mobilenet_0.50':
-                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.50)
-                    pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
-                    last_layer = 'MConv_Stage6_L{aux}_5'
-                elif args.model == 'cmu':
-                    net = CmuNetwork({'image': q_inp_split[gpu_id]})
-                    pretrain_path = './models/numpy/openpose_coco.npy'
-                    last_layer = 'Mconv7_stage6_L{aux}'
-                elif args.model == 'mobilenet_p_1.0':
-                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=1.0)
-                    pretrain_path = './models/pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
-                    last_layer = 'MConv_Stage6_L{aux}_5'
-                elif args.model == 'mobilenet_p_0.75':
-                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.75)
-                    pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
-                    last_layer = 'MConv_Stage6_L{aux}_5'
-                elif args.model == 'mobilenet_p_0.75_0.50':
-                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.75, conv_width2=0.50)
-                    pretrain_path = './models/pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
-                    last_layer = 'MConv_Stage6_L{aux}_5'
-                elif args.model == 'mobilenet_p_0.50':
-                    net = MobilenetNetwork({'image': q_inp_split[gpu_id]}, conv_width=0.50)
-                    pretrain_path = './models/pretrained/mobilenet_v1_0.50_224_2017_06_14/mobilenet_v1_0.50_224.ckpt'
-                    last_layer = 'MConv_Stage6_L{aux}_5'
-                else:
-                    raise Exception('Invalid Mode.')
+                net, pretrain_path, last_layer = get_network(args.model, q_inp_split[gpu_id])
                 vect, heat = net.loss_last()
                 output_vectmap.append(vect)
                 output_heatmap.append(heat)

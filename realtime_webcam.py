@@ -9,6 +9,7 @@ import tensorflow as tf
 from common import CocoPairsRender, CocoColors, preprocess, estimate_pose
 from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
+from networks import get_network
 from pose_dataset import CocoPoseLMDB
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
@@ -41,9 +42,10 @@ def cb_showimg(img, preprocessed, heatMat, pafMat, humans, show_process=False):
 
     if show_process:
         process_img = CocoPoseLMDB.display_image(preprocessed, heatMat, pafMat, as_numpy=True)
+        process_img = cv2.resize(process_img, (640, 480), interpolation=cv2.INTER_AREA)
 
         canvas = np.zeros([480, 640 + neww, 3], dtype=np.uint8)
-        # canvas[:, :640] = process_img
+        canvas[:, :640] = process_img
         canvas[:, 640:] = image
     else:
         canvas = image
@@ -60,42 +62,37 @@ if __name__ == '__main__':
     parser.add_argument('--input-height', type=int, default=368)
     parser.add_argument('--stage-level', type=int, default=6)
     parser.add_argument('--camera', type=int, default=0)
-    parser.add_argument('--model', type=str, default='mobilenet_fast', help='cmu / mobilenet / mobilenet_accurate / mobilenet_fast')
+    parser.add_argument('--zoom', type=float, default=1.0)
+    parser.add_argument('--model', type=str, default='mobilenet', help='cmu / mobilenet / mobilenet_accurate / mobilenet_fast')
     parser.add_argument('--show-process', type=bool, default=False, help='for debug purpose, if enabled, speed for inference is dropped.')
     args = parser.parse_args()
-
-    cam = cv2.VideoCapture(args.camera)
 
     input_node = tf.placeholder(tf.float32, shape=(1, args.input_height, args.input_width, 3), name='image')
 
     with tf.Session() as sess:
-        if args.model == 'cmu':
-            net = CmuNetwork({'image': input_node}, trainable=False)
-            net.load('./models/numpy/openpose_coco.npy', sess)
-            last_layer = 'Mconv7_stage{stage}_L{aux}'
-        elif args.model == 'mobilenet_accurate':
-            net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=1.0)
-            loader = tf.train.Saver()
-            loader.restore(sess, './models/trained/mobilenet_accurate/model-170000')
-            last_layer = 'MConv_Stage{stage}_L{aux}_5'
-        elif args.model == 'mobilenet_fast':
-            net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=0.5)
-            loader = tf.train.Saver()
-            loader.restore(sess, './models/trained/mobilenet_fast/model-163000')
-            last_layer = 'MConv_Stage{stage}_L{aux}_5'
-        elif args.model == 'mobilenet':
-            net = MobilenetNetwork({'image': input_node}, trainable=False, conv_width=0.75, conv_width2=0.50)
-            loader = tf.train.Saver()
-            loader.restore(sess, './models/trained/mobilenet/model-241003')
-            last_layer = 'MConv_Stage{stage}_L{aux}_5'
-        else:
-            raise Exception('Invalid Mode.')
+        net, _, last_layer = get_network(args.model, input_node, sess)
+
+        cam = cv2.VideoCapture(args.camera)
+        ret_val, img = cam.read()
+        logging.info('cam image=%dx%d' % (img.shape[1], img.shape[0]))
 
         while True:
             logging.debug('cam read+')
             ret_val, img = cam.read()
 
             logging.debug('cam preprocess+')
+            if args.zoom < 1.0:
+                canvas = np.zeros_like(img)
+                img_scaled = cv2.resize(img, None, fx=args.zoom, fy=args.zoom, interpolation=cv2.INTER_LINEAR)
+                dx = (canvas.shape[1] - img_scaled.shape[1]) // 2
+                dy = (canvas.shape[0] - img_scaled.shape[0]) // 2
+                canvas[dy:dy + img_scaled.shape[0], dx:dx + img_scaled.shape[1]] = img_scaled
+                img = canvas
+            elif args.zoom > 1.0:
+                img_scaled = cv2.resize(img, None, fx=args.zoom, fy=args.zoom, interpolation=cv2.INTER_LINEAR)
+                dx = (img_scaled.shape[1] - img.shape[1]) // 2
+                dy = (img_scaled.shape[0] - img.shape[0]) // 2
+                img = img_scaled[dy:img.shape[0], dx:img.shape[1]]
             preprocessed = preprocess(img, args.input_width, args.input_height)
 
             logging.debug('cam process+')

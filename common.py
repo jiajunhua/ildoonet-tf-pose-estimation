@@ -5,9 +5,8 @@ import logging
 
 import numpy as np
 import itertools
-import tensorflow as tf
 import cv2
-from scipy.ndimage.filters import maximum_filter, gaussian_filter
+from scipy.ndimage.filters import maximum_filter
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
@@ -52,11 +51,11 @@ CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
-NMS_Threshold = 0.05
-InterMinAbove_Threshold = 4
-Inter_Threashold = 0.05
-Min_Subset_Cnt = 3
-Min_Subset_Score = 0.4
+NMS_Threshold = 0.1
+InterMinAbove_Threshold = 6
+Inter_Threashold = 0.1
+Min_Subset_Cnt = 4
+Min_Subset_Score = 0.8
 Max_Human = 96
 
 
@@ -142,7 +141,10 @@ def estimate_pose_pair(coords, partIdx1, partIdx2, pafMatX, pafMatY):
         for idx2, (y2, x2) in enumerate(zip(peak_coord2[0], peak_coord2[1])):
             score, count = get_score(x1, y1, x2, y2, pafMatX, pafMatY)
             cnt += 1
-            if count < InterMinAbove_Threshold or score <= 0.0:
+            if (partIdx1, partIdx2) in [(2, 3), (3, 4), (5, 6), (6, 7)]:
+                if count < InterMinAbove_Threshold // 2 or score <= 0.0:
+                    continue
+            elif count < InterMinAbove_Threshold or score <= 0.0:
                 continue
             connection_temp.append({
                 'score': score,
