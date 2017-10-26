@@ -6,7 +6,7 @@ import logging
 
 import tensorflow as tf
 
-from common import CocoPairsRender, CocoColors, preprocess, estimate_pose
+from common import CocoPairsRender, CocoColors, preprocess, estimate_pose, draw_humans
 from network_cmu import CmuNetwork
 from network_mobilenet import MobilenetNetwork
 from networks import get_network
@@ -24,16 +24,7 @@ def cb_showimg(img, preprocessed, heatMat, pafMat, humans, show_process=False):
     # display
     image = img
     image_h, image_w = image.shape[:2]
-    heat_h, heat_w = heatMat.shape[:2]
-    for _, human in humans.items():
-        for part_idx, part in enumerate(human):
-            if part['partIdx'] not in CocoPairsRender:
-                continue
-            center1 = (int((part['c1'][0] + 0.5) * image_w / heat_w), int((part['c1'][1] + 0.5) * image_h / heat_h))
-            center2 = (int((part['c2'][0] + 0.5) * image_w / heat_w), int((part['c2'][1] + 0.5) * image_h / heat_h))
-            cv2.circle(image, center1, 3, part['partIdx'][0], thickness=3, lineType=8, shift=0)
-            cv2.circle(image, center2, 3, part['partIdx'][1], thickness=3, lineType=8, shift=0)
-            image = cv2.line(image, center1, center2, CocoColors[part_idx % len(CocoColors)], 1)
+    image = draw_humans(image, humans)
 
     scale = 480.0 / image_h
     newh, neww = 480, int(scale * image_w + 0.5)

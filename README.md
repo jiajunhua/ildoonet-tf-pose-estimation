@@ -13,39 +13,7 @@ Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 | **~0.6 FPS** | **~4.2 FPS** @ 368x368 | **~10 FPS** @ 368x368 |
 | 2.8GHz Quad-core i7 | 2.8GHz Quad-core i7 | Jetson TX2 Embedded Board | 
 
-**Features**
-
-- [x] CMU's original network architecture and weights.
-
-  - [x] Transfer Original Weights to Tensorflow
-
-  - [x] Training Code with multi-gpus
-  
-  - [ ] Evaluate with test dataset
-
-- [ ] Inference
-
-  - [x] Post processing from network output.
-
-  - [ ] Faster post-processing
-
-  - [ ] Multi-Scale Inference
-
-- [x] Faster network variants using custom mobilenet architecture.
-
-  - [x] Depthwise Separable Convolution Version
-  
-  - [x] Mobilenet Version
-  
-- [ ] Demos
-
-  - [x] Realtime Webcam Demo
-  
-  - [x] Image File Demo
-  
-  - [ ] Video File Demo
-
-- [ ] ROS Support. 
+Implemented features are listed here : [features](./etcs/feature.md)
 
 ## Install
 
@@ -129,7 +97,7 @@ $ python3 inference.py --model=mobilenet --imgpath=...
 
 Then you will see the screen as below with pafmap, heatmap, result and etc.
 
-![inferent_result](./etcs/inference_result.png)
+![inferent_result](./etcs/inference_result2.png)
 
 ### Realtime Webcam
 

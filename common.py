@@ -59,6 +59,14 @@ Min_Subset_Score = 0.8
 Max_Human = 96
 
 
+def connections_to_human(connections, heatMat):
+    point_dict = defaultdict(lambda: None)
+    for conn in connections:
+        point_dict[conn['partIdx'][0]] = (conn['partIdx'][0], (conn['c1'][0] / heatMat.shape[2], conn['c1'][1] / heatMat.shape[1]), heatMat[conn['partIdx'][0], conn['c1'][1], conn['c1'][0]])
+        point_dict[conn['partIdx'][1]] = (conn['partIdx'][1], (conn['c2'][0] / heatMat.shape[2], conn['c2'][1] / heatMat.shape[1]), heatMat[conn['partIdx'][1], conn['c2'][1], conn['c2'][0]])
+    return point_dict
+
+
 def non_max_suppression(np_input, window_size=3, threshold=NMS_Threshold):
     under_threshold_indices = np_input < threshold
     np_input[under_threshold_indices] = 0
@@ -129,7 +137,7 @@ def estimate_pose(heatMat, pafMat):
     connection_by_human = {k: v for (k, v) in connection_by_human.items() if max([ii['score'] for ii in v]) >= Min_Subset_Score}
 
     logging.debug('estimate_pose4')
-    return connection_by_human
+    return [connections_to_human(conn, heatMat) for conn in connection_by_human.values()]
 
 
 def estimate_pose_pair(coords, partIdx1, partIdx2, pafMatX, pafMatY):
@@ -211,3 +219,29 @@ def preprocess(img, width, height):
     val_image = val_image.astype(float)
     val_image = val_image * (2.0 / 255.0) - 1.0
     return val_image
+
+
+def draw_humans(img, human_list):
+    img_copied = np.copy(img)
+    image_h, image_w = img_copied.shape[:2]
+    centers = {}
+    for human in human_list:
+        part_idxs = human.keys()
+
+        # draw point
+        for i in range(CocoPart.Background.value):
+            if i not in part_idxs:
+                continue
+            part_coord = human[i][1]
+            center = (int(part_coord[0] * image_w + 0.5), int(part_coord[1] * image_h + 0.5))
+            centers[i] = center
+            cv2.circle(img_copied, center, 3, CocoColors[i], thickness=3, lineType=8, shift=0)
+
+        # draw line
+        for pair_order, pair in enumerate(CocoPairsRender):
+            if pair[0] not in part_idxs or pair[1] not in part_idxs:
+                continue
+
+            img_copied = cv2.line(img_copied, centers[pair[0]], centers[pair[1]], CocoColors[pair_order], 3)
+
+    return img_copied

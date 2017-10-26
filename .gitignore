@@ -103,3 +103,4 @@ ENV/
 # models
 *ckpt*
 *.npy
+timeline*.json
