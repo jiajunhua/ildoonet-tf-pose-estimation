@@ -137,9 +137,7 @@ Then you will see the screen as below with pafmap, heatmap, result and etc.
 $ python3 realtime_webcam.py --camera=0 --model=mobilenet --zoom=1.0
 ```
 
-Then you will see the realtime webcam screen with estimated poses as below. This result was recored on macbook pro 13" with 3.1Ghz Dual-Core CPU.
-
-![realtime_result](./etcs/openpose_macbook13_mobilenet2.gif)
+Then you will see the realtime webcam screen with estimated poses as below. This [Realtime Result](./etcs/openpose_macbook13_mobilenet2.gif) was recored on macbook pro 13" with 3.1Ghz Dual-Core CPU.
 
 ## Training
 
