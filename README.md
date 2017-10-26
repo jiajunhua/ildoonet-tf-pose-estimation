@@ -118,10 +118,22 @@ CMU's original model can not be executed due to 'out of memory' on '368x368' siz
 
 ## Demo
 
+### Test Inference
+
+You can test the inference feature with a single image.
+
+```
+$ python3 inference.py --model=mobilenet --imgpath=...
+```
+
+Then you will see the screen as below with pafmap, heatmap, result and etc.
+
+![inferent_result](./etcs/inference_result.png)
+
 ### Realtime Webcam
 
 ```
-$ python3 realtime_webcam.py --camera=0 --model=mobilenet
+$ python3 realtime_webcam.py --camera=0 --model=mobilenet --zoom=1.0
 ```
 
 ## Training

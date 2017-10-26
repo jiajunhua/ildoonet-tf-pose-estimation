@@ -65,9 +65,9 @@ if __name__ == '__main__':
     for images_test, heatmaps, vectmaps in df_valid.get_data():
         validation_cache.append((images_test, heatmaps, vectmaps))
 
-    val_image = read_imgfile('./images/person1.jpg', args.input_width, args.input_height)
-    val_image2 = read_imgfile('./images/person2.jpg', args.input_width, args.input_height)
-    val_image3 = read_imgfile('./images/person3.jpg', args.input_width, args.input_height)
+    val_image = read_imgfile('./images/p1.jpg', args.input_width, args.input_height)
+    val_image2 = read_imgfile('./images/p2.jpg', args.input_width, args.input_height)
+    val_image3 = read_imgfile('./images/p3.jpg', args.input_width, args.input_height)
 
     # define model for multi-gpu
     q_inp_split = tf.split(q_inp, args.gpus)

@@ -22,7 +22,7 @@ config.gpu_options.allow_growth = True
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Tensorflow Openpose Inference')
-    parser.add_argument('--imgpath', type=str, default='./images/person3.jpg')
+    parser.add_argument('--imgpath', type=str, default='./images/p2.jpg')
     parser.add_argument('--input-width', type=int, default=368)
     parser.add_argument('--input-height', type=int, default=368)
     parser.add_argument('--stage-level', type=int, default=6)

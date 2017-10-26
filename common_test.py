@@ -42,7 +42,7 @@ class TestStringMethods(unittest.TestCase):
         elapsed = time.time() - t
         logging.info('[test_mobilenet] elapsed=%f' % elapsed)
 
-        self._show('./images/person3.jpg', inpmat, heatmat, pafmat, humans)
+        self._show('./images/p3.jpg', inpmat, heatmat, pafmat, humans)
 
     def test_cmu(self):
         inpmat = np.load('./tests/person3.pickle')
@@ -54,7 +54,7 @@ class TestStringMethods(unittest.TestCase):
         elapsed = time.time() - t
         logging.info('[test_mobilenet] elapsed=%f' % elapsed)
 
-        # self._show('./images/person3.jpg', inpmat, heatmat, pafmat, humans)
+        # self._show('./images/p3.jpg', inpmat, heatmat, pafmat, humans)
 
 if __name__ == '__main__':
     unittest.main()
