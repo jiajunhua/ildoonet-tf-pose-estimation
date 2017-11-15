@@ -1,20 +1,24 @@
+import matplotlib as mpl
+mpl.use('Agg')
+
 import argparse
 import logging
 import os
+import sys
 import time
 import datetime
+
+from pose_dataset import get_dataflow_batch, DataFlowToQueue, CocoPose
+from pose_augment import set_network_input_wh, set_network_scale
+from common import read_imgfile
 
 import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import timeline
+from tqdm import tqdm
 
-from common import read_imgfile
-from network_cmu import CmuNetwork
-from network_mobilenet import MobilenetNetwork
 from networks import get_network
-from pose_augment import set_network_input_wh
-from pose_dataset import get_dataflow_batch, DataFlowToQueue, CocoPoseLMDB
 from tensorpack.dataflow.remote import send_dataflow_zmq, RemoteDataZMQ
 
 logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(levelname)s %(message)s')
@@ -23,13 +27,14 @@ logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(le
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training codes for Openpose using Tensorflow')
     parser.add_argument('--model', default='mobilenet', help='model name')
-    parser.add_argument('--datapath', type=str, default='/data/public/rw/coco-pose-estimation-lmdb/')
+    parser.add_argument('--datapath', type=str, default='/root/coco/annotations')
+    parser.add_argument('--imgpath', type=str, default='/root/coco/')
     parser.add_argument('--batchsize', type=int, default=10)
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--max-epoch', type=int, default=60)
     parser.add_argument('--lr', type=str, default='0.0001')
     parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-mobilenet_1.0/')
-    parser.add_argument('--logpath', type=str, default='/data/private/tf-openpose-log/')
+    parser.add_argument('--logpath', type=str, default='/data/private/tf-openpose-log2/')
     parser.add_argument('--checkpoint', type=str, default='')
     parser.add_argument('--tag', type=str, default='')
     parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
@@ -43,8 +48,14 @@ if __name__ == '__main__':
 
     # define input placeholder
     set_network_input_wh(args.input_width, args.input_height)
-    output_w = args.input_width // 8
-    output_h = args.input_height // 8
+    scale = 4
+
+    if args.model == 'vgg':
+        scale = 8
+
+    set_network_scale(scale)
+    output_w = args.input_width // scale
+    output_h = args.input_height // scale
 
     with tf.device(tf.DeviceSpec(device_type="GPU", device_index=0)):
         input_node = tf.placeholder(tf.float32, shape=(args.batchsize, args.input_height, args.input_width, 3), name='image')
@@ -53,21 +64,27 @@ if __name__ == '__main__':
 
         # prepare data
         if not args.remote_data:
-            df = get_dataflow_batch(args.datapath, True, args.batchsize)
+            df = get_dataflow_batch(args.datapath, True, args.batchsize, img_path=args.imgpath)
         else:
             df = RemoteDataZMQ(args.remote_data, hwm=5)
         enqueuer = DataFlowToQueue(df, [input_node, heatmap_node, vectmap_node], queue_size=100)
         q_inp, q_heat, q_vect = enqueuer.dequeue()
 
-    df_valid = get_dataflow_batch(args.datapath, False, args.batchsize)
+    df_valid = get_dataflow_batch(args.datapath, False, args.batchsize, img_path=args.imgpath)
     df_valid.reset_state()
     validation_cache = []
-    for images_test, heatmaps, vectmaps in df_valid.get_data():
+    for images_test, heatmaps, vectmaps in tqdm(df_valid.get_data()):
         validation_cache.append((images_test, heatmaps, vectmaps))
+    del df_valid
+    df_valid = None
 
-    val_image = read_imgfile('./images/p1.jpg', args.input_width, args.input_height)
-    val_image2 = read_imgfile('./images/p2.jpg', args.input_width, args.input_height)
-    val_image3 = read_imgfile('./images/p3.jpg', args.input_width, args.input_height)
+    val_image = [read_imgfile('./images/p1.jpg', args.input_width, args.input_height),
+                 read_imgfile('./images/p2.jpg', args.input_width, args.input_height),
+                 read_imgfile('./images/p3.jpg', args.input_width, args.input_height),
+                 read_imgfile('./images/golf.jpg', args.input_width, args.input_height),
+                 read_imgfile('./images/hand1.jpg', args.input_width, args.input_height),
+                 read_imgfile('./images/hand2.jpg', args.input_width, args.input_height),
+                 ]
 
     # define model for multi-gpu
     q_inp_split = tf.split(q_inp, args.gpus)
@@ -98,18 +115,18 @@ if __name__ == '__main__':
         losses = []
         for l1_idx, l1 in enumerate(vectmap_losses):
             l1_concat = tf.concat(l1, axis=0)
-            loss = tf.nn.l2_loss(l1_concat - q_vect, name='loss_l1_stage%d' % l1_idx)
+            loss = tf.nn.l2_loss(l1_concat - q_vect, name='loss_l1_stage%d' % l1_idx) / args.batchsize
             losses.append(loss)
         for l2_idx, l2 in enumerate(heatmap_losses):
             l2_concat = tf.concat(l2, axis=0)
-            loss = tf.nn.l2_loss(l2_concat - q_heat, name='loss_l2_stage%d' % l2_idx)
+            loss = tf.nn.l2_loss(l2_concat - q_heat, name='loss_l2_stage%d' % l2_idx) / args.batchsize
             losses.append(loss)
 
         output_vectmap = tf.concat(output_vectmap, axis=0)
         output_heatmap = tf.concat(output_heatmap, axis=0)
         total_loss = tf.reduce_mean(losses)
-        total_loss_ll_paf = tf.reduce_mean(tf.nn.l2_loss(output_vectmap - q_vect))
-        total_loss_ll_heat = tf.reduce_mean(tf.nn.l2_loss(output_heatmap - q_heat))
+        total_loss_ll_paf = tf.reduce_mean(tf.nn.l2_loss(output_vectmap - q_vect) / args.batchsize)
+        total_loss_ll_heat = tf.reduce_mean(tf.nn.l2_loss(output_heatmap - q_heat) / args.batchsize)
         total_ll_loss = tf.reduce_mean([total_loss_ll_paf, total_loss_ll_heat])
 
         # define optimizer
@@ -118,7 +135,7 @@ if __name__ == '__main__':
         if ',' not in args.lr:
             starter_learning_rate = float(args.lr)
             learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                                       decay_steps=50000, decay_rate=0.8, staircase=True)
+                                                       decay_steps=10000, decay_rate=0.8, staircase=True)
         else:
             lrs = [float(x) for x in args.lr.split(',')]
             boundaries = [step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0]
@@ -131,24 +148,20 @@ if __name__ == '__main__':
     # define summary
     tf.summary.scalar("loss", total_loss)
     tf.summary.scalar("loss_lastlayer", total_ll_loss)
-    tf.summary.scalar("loss_lastlayer_paf", tf.nn.l2_loss(output_vectmap - q_vect))
-    tf.summary.scalar("loss_lastlayer_heat", tf.nn.l2_loss(output_heatmap - q_heat))
+    tf.summary.scalar("loss_lastlayer_paf", tf.nn.l2_loss(output_vectmap - q_vect) / args.batchsize)
+    tf.summary.scalar("loss_lastlayer_heat", tf.nn.l2_loss(output_heatmap - q_heat) / args.batchsize)
     tf.summary.scalar("queue_size", enqueuer.size())
     merged_summary_op = tf.summary.merge_all()
 
     valid_loss = tf.placeholder(tf.float32, shape=[])
     valid_loss_ll = tf.placeholder(tf.float32, shape=[])
-    sample_train = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
-    sample_valid = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
-    sample_valid2 = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
-    sample_valid3 = tf.placeholder(tf.float32, shape=(1, 640, 640, 3))
-    train_img = tf.summary.image('training sample', sample_train, 1)
-    valid_img = tf.summary.image('validation sample', sample_valid, 1)
-    valid_img2 = tf.summary.image('validation sample2', sample_valid2, 1)
-    valid_img3 = tf.summary.image('validation sample3', sample_valid3, 1)
+    sample_train = tf.placeholder(tf.float32, shape=(10, 640, 640, 3))
+    sample_valid = tf.placeholder(tf.float32, shape=(6, 640, 640, 3))
+    train_img = tf.summary.image('training sample', sample_train, 10)
+    valid_img = tf.summary.image('validation sample', sample_valid, 6)
     valid_loss_t = tf.summary.scalar("loss_valid", valid_loss)
     valid_loss_ll_t = tf.summary.scalar("loss_valid_lastlayer", valid_loss_ll)
-    merged_validate_op = tf.summary.merge([train_img, valid_img, valid_img2, valid_img3, valid_loss_t, valid_loss_ll_t])
+    merged_validate_op = tf.summary.merge([train_img, valid_img, valid_loss_t, valid_loss_ll_t])
 
     saver = tf.train.Saver(max_to_keep=100)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -219,6 +232,9 @@ if __name__ == '__main__':
                 file_writer.add_summary(summary, gs_num)
 
             if gs_num - last_gs_num2 >= 1000:
+                # save weights
+                saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
+
                 average_loss = average_loss_ll = 0
                 total_cnt = 0
 
@@ -235,42 +251,36 @@ if __name__ == '__main__':
                 logging.info('validation(%d) loss=%f, loss_ll=%f' % (total_cnt, average_loss / total_cnt, average_loss_ll / total_cnt))
                 last_gs_num2 = gs_num
 
-                sample_image = enqueuer.last_dp[0][0]
+                sample_image = [enqueuer.last_dp[0][i] for i in range(10)]
                 pafMat, heatMat = sess.run(
                     [
                         net.get_output(name=last_layer.format(aux=1)),
                         net.get_output(name=last_layer.format(aux=2))
-                    ], feed_dict={q_inp: np.array([sample_image, val_image, val_image2, val_image3]*(args.batchsize // 4))}
+                    ], feed_dict={q_inp: np.array((sample_image + val_image)*(args.batchsize // 16))}
                 )
-                sample_result = CocoPoseLMDB.display_image(sample_image, heatMat[0], pafMat[0], as_numpy=True)
-                sample_result = cv2.resize(sample_result, (640, 640))
-                sample_result = sample_result.reshape([1, 640, 640, 3]).astype(float)
 
-                test_result = CocoPoseLMDB.display_image(val_image, heatMat[1], pafMat[1], as_numpy=True)
-                test_result = cv2.resize(test_result, (640, 640))
-                test_result = test_result.reshape([1, 640, 640, 3]).astype(float)
+                sample_results = []
+                for i in range(len(sample_image)):
+                    test_result = CocoPose.display_image(sample_image[i], heatMat[i], pafMat[i], as_numpy=True)
+                    test_result = cv2.resize(test_result, (640, 640))
+                    test_result = test_result.reshape([640, 640, 3]).astype(float)
+                    sample_results.append(test_result)
 
-                test_result2 = CocoPoseLMDB.display_image(val_image2, heatMat[2], pafMat[2], as_numpy=True)
-                test_result2 = cv2.resize(test_result2, (640, 640))
-                test_result2 = test_result2.reshape([1, 640, 640, 3]).astype(float)
-
-                test_result3 = CocoPoseLMDB.display_image(val_image3, heatMat[3], pafMat[3], as_numpy=True)
-                test_result3 = cv2.resize(test_result3, (640, 640))
-                test_result3 = test_result3.reshape([1, 640, 640, 3]).astype(float)
+                test_results = []
+                for i in range(len(val_image)):
+                    test_result = CocoPose.display_image(val_image[i], heatMat[len(sample_image) + i], pafMat[len(sample_image) + i], as_numpy=True)
+                    test_result = cv2.resize(test_result, (640, 640))
+                    test_result = test_result.reshape([640, 640, 3]).astype(float)
+                    test_results.append(test_result)
 
                 # save summary
                 summary = sess.run(merged_validate_op, feed_dict={
                     valid_loss: average_loss / total_cnt,
                     valid_loss_ll: average_loss_ll / total_cnt,
-                    sample_valid: test_result,
-                    sample_valid2: test_result2,
-                    sample_valid3: test_result3,
-                    sample_train: sample_result
+                    sample_valid: test_results,
+                    sample_train: sample_results
                 })
                 file_writer.add_summary(summary, gs_num)
-
-                # save weights
-                saver.save(sess, os.path.join(args.modelpath, 'model'), global_step=global_step)
 
         saver.save(sess, os.path.join(args.modelpath, 'model_final'), global_step=global_step)
     logging.info('optimization finished. %f' % (time.time() - time_started))

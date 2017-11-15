@@ -2,7 +2,6 @@ import sys
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-
 import common
 
 DEFAULT_PADDING = 'SAME'
@@ -132,6 +131,10 @@ class BaseNetwork(object):
         assert padding in ('SAME', 'VALID')
 
     @layer
+    def upsample(self, input, factor, name):
+        return tf.image.resize_bilinear(input, [int(input.get_shape()[1]) * factor, int(input.get_shape()[2]) * factor], name=name)
+
+    @layer
     def separable_conv(self, input, k_h, k_w, c_o, stride, name, relu=True):
         with slim.arg_scope([slim.batch_norm], fused=common.batchnorm_fused):
             output = slim.separable_convolution2d(input,
@@ -159,18 +162,21 @@ class BaseNetwork(object):
                                         normalizer_fn=slim.batch_norm,
                                         trainable=self.trainable,
                                         weights_regularizer=tf.contrib.layers.l2_regularizer(common.regularizer_dsconv),
-                                        # weights_regularizer=None,
                                         scope=name + '_pointwise')
 
         return output
 
     @layer
-    def convb(self, input, k_h, k_w, c_o, stride, name):
+    def convb(self, input, k_h, k_w, c_o, stride, name, relu=True):
         with slim.arg_scope([slim.batch_norm], fused=common.batchnorm_fused):
             output = slim.convolution2d(input, c_o, kernel_size=[k_h, k_w],
                                         stride=stride,
                                         normalizer_fn=slim.batch_norm,
                                         weights_regularizer=tf.contrib.layers.l2_regularizer(common.regularizer_conv),
+                                        weights_initializer=tf.contrib.layers.xavier_initializer(),
+                                        biases_initializer=slim.init_ops.zeros_initializer(),
+                                        trainable=self.trainable,
+                                        activation_fn=tf.nn.relu if relu else None,
                                         scope=name)
         return output
 

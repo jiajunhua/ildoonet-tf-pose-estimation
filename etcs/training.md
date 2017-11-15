@@ -1,13 +1,17 @@
 ## Training
 
-### Dataset
+### Coco Dataset 
 
-You should download the dataset in LMDB format provided by CMU. See : https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation/blob/master/training/get_lmdb.sh
+You should download COCO Dataset from http://cocodataset.org/#download
 
-```
-$ wget -nc --directory-prefix=lmdb_trainVal/ 		http://posefs1.perception.cs.cmu.edu/Users/ZheCao/lmdb_trainVal/data.mdb
-$ wget -nc --directory-prefix=lmdb_trainVal/ 		http://posefs1.perception.cs.cmu.edu/Users/ZheCao/lmdb_trainVal/lock.mdb
-```
+Also, you need to install cocoapi for easy parsing : https://github.com/cocodataset/cocoapi
+
+'''
+$ git clone https://github.com/cocodataset/cocoapi
+$ cd cocoapi/PythonAPI
+$ python3 setup.py build_ext --inplace
+$ python3 setup.py build_ext install
+'''
 
 ### Augmentation
 

@@ -2,4 +2,6 @@ argparse
 lmdb
 matplotlib
 scipy
+tqdm
+requests
 git+https://github.com/ppwwyyxx/tensorpack.git
