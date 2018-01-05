@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 import rospy
 
@@ -47,6 +48,7 @@ def callback_image(data):
 
 
 if __name__ == '__main__':
+    rospy.info('initialization+')
     rospy.init_node('TfPoseEstimatorROS', anonymous=True)
 
     # parameters

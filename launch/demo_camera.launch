@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="video" default="0" />
+
+    <node name="cv_camera" pkg="cv_camera" type="cv_camera_node" output="screen" required="true">
+        <param name="device_id" value="${video}" />
+    </node>
+
+    <node name="pose_estimator" pkg="tfpose_ros" type="broadcaster_ros.py" output="screen" required="true">
+        <param name="camera" value="/cv_camera/image_raw" />
+        <param name="model" value="mobilenet_368x368" />
+    </node>
+
+</launch>

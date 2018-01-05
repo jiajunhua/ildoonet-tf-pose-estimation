@@ -26,3 +26,5 @@ generate_messages(
 catkin_package(
   CATKIN_DEPENDS message_generation message_runtime
 )
+
+install()
