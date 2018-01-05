@@ -29,6 +29,15 @@ $ python3 train.py --model=cmu --datapath={datapath} --batchsize=64 --lr=0.001 -
 2017-09-27 15:58:50,307 INFO Restore pretrained weights...
 ```
 
+If you want to reproduce the original paper's result, the following setting is recommended.
+
+- model : vgg
+- lr : 0.0001 or 0.00004
+- input-width = input-height = 368x368 or 432x368
+- batchsize : 10 (I trained with batchsizes up to 128, they are trained well)
+
+![train_loss_cmu](./etcs/train_loss_cmu.png)
+
 ### Run for Faster Training
 
 If you have enough computing resources in multiple nodes, you can launch multiple workers on nodes to help data preparation.

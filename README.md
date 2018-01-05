@@ -1,4 +1,4 @@
-# tf-openpose
+# tf-pose-estimation
 
 'Openpose' for human pose estimation have been implemented using Tensorflow. It also provides several variants that have made some changes to the network structure for **real-time processing on the CPU or low-power embedded devices.**
 
@@ -122,6 +122,12 @@ See : [etcs/training.md](./etcs/training.md)
 [3] Custom Caffe by Openpose : https://github.com/CMU-Perceptual-Computing-Lab/caffe_train
 
 [4] Keras Openpose : https://github.com/michalfaber/keras_Realtime_Multi-Person_Pose_Estimation
+
+### Lifting from the deep
+
+[1] Arxiv Paper : https://arxiv.org/abs/1701.00295
+
+[2] https://github.com/DenisTome/Lifting-from-the-Deep-release
 
 ### Mobilenet
 

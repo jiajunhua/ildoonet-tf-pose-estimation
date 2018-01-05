@@ -1,0 +1,7 @@
+argparse
+matplotlib
+scipy
+tqdm
+requests
+fire
+git+https://github.com/ppwwyyxx/tensorpack.git
