@@ -36,7 +36,12 @@ If you want to reproduce the original paper's result, the following setting is r
 - input-width = input-height = 368x368 or 432x368
 - batchsize : 10 (I trained with batchsizes up to 128, they are trained well)
 
-![train_loss_cmu](./etcs/train_loss_cmu.png)
+| ![train_loss_cmu](./etcs/loss_ll_heat.png) | ![train_loss_cmu](./etcs/train_loss_paf.png) |  
+
+As you can see from the table above, training loss was converged at the almost same trends with the original paper.
+ 
+The mobilenet versions has slightly poor loss value compared to the original one. Training losses are 3~8% larger, though validation losses are 5~14% larger.
+
 
 ### Run for Faster Training
 

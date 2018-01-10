@@ -107,7 +107,7 @@ Then you will see the realtime webcam screen with estimated poses as below. This
 
 ## Python Usage
 
-This pose estimator provides simple python classes than you can use in your applications.
+This pose estimator provides simple python classes that you can use in your applications.
 
 See [run.py](run.py) or [run_webcam.py](run_webcam.py) as references.
 
