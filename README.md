@@ -105,6 +105,18 @@ $ python3 run_webcam.py --model=mobilenet_thin_432x368 --camera=0
 
 Then you will see the realtime webcam screen with estimated poses as below. This [Realtime Result](./etcs/openpose_macbook13_mobilenet2.gif) was recored on macbook pro 13" with 3.1Ghz Dual-Core CPU.
 
+## Python Usage
+
+This pose estimator provides simple python classes than you can use in your applications.
+
+See [run.py](run.py) or [run_webcam.py](run_webcam.py) as references.
+
+```python
+e = TfPoseEstimator(get_graph_path(args.model), target_size=(w, h))
+humans = e.inference(image)
+image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
+```
+
 ## ROS Support
 
 See : [etcs/ros.md](./etcs/ros.md)
