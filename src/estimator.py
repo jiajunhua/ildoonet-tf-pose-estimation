@@ -90,8 +90,8 @@ class PoseEstimator:
     heatmap_gaussian = False
     adaptive_threshold = False
 
-    NMS_Threshold = 0.2
-    Local_PAF_Threshold = 0.2
+    NMS_Threshold = 0.1
+    Local_PAF_Threshold = 0.1
     PAF_Count_Threshold = 5
     Part_Count_Threshold = 4
     Part_Score_Threshold = 0.6

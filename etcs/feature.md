@@ -6,13 +6,13 @@
 
   - [x] Training Code with multi-gpus
   
-  - [ ] Evaluate with test dataset
+  - [x] Evaluate with test dataset
 
 - [ ] Inference
 
   - [x] Post processing from network output.
 
-  - [ ] Faster post-processing
+  - [x] Faster post-processing
 
   - [ ] Multi-Scale Inference
 
@@ -30,4 +30,4 @@
   
   - [ ] Video File Demo
 
-- [ ] ROS Support. 
+- [x] ROS Support. See [./etcs/ros.md](ros readme). 
