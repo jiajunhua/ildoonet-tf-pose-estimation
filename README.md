@@ -43,7 +43,7 @@ I have tried multiple variations of models to find optmized network architecture
   - [pretrained weight download](https://www.dropbox.com/s/xh5s7sb7remu8tx/openpose_coco.npy?dl=0)
   
 - dsconv
-  - Same architecture as the cmu version except for<br/>the **depthwise separable convolution** of mobilenet.
+  - Same architecture as the cmu version except for the **depthwise separable convolution** of mobilenet.
   - I trained it using 'transfer learning', but it provides not-enough speed and accuracy.
   
 - mobilenet

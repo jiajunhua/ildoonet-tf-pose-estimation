@@ -25,7 +25,7 @@ There are dependencies to launch demo,
 |:----------------|:---------------------------|
 | ![cmu-model](/etcs/openpose_p40_cmu.gif) | ![cmu-model](/etcs/openpose_p40_mobilenet.gif) |
 
-Above tests were run on P40 gpu. Latency between current video frame and processed frame is much lower on mobilenet version.
+Above tests were run on a P40 gpu. Latency between current video frames and processed frames is much lower on mobilenet version.
 
 Source : https://www.youtube.com/watch?v=rSZnyBuc6tc
 
