@@ -12,6 +12,7 @@ except ImportError:
 
 from contextlib import contextmanager
 
+import os
 import random
 import requests
 import cv2
@@ -27,7 +28,7 @@ from tensorpack.dataflow.prefetch import PrefetchData
 from tensorpack.dataflow.base import RNGDataFlow, DataFlowTerminated
 
 from pycocotools.coco import COCO
-from src.pose_augment import pose_flip, pose_rotation, pose_to_img, pose_crop_random, \
+from pose_augment import pose_flip, pose_rotation, pose_to_img, pose_crop_random, \
     pose_resize_shortestedge_random, pose_resize_shortestedge_fixed, pose_crop_center, pose_random_scale
 
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -456,7 +457,6 @@ class DataFlowToQueue(threading.Thread):
 
 
 if __name__ == '__main__':
-    import os
     os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
     from src.pose_augment import set_network_input_wh

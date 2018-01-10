@@ -1,14 +1,10 @@
 import os
 
 import tensorflow as tf
-from network_hybrid_try import HybridNetworkTry
 from network_mobilenet import MobilenetNetwork
 from network_mobilenet_thin import MobilenetNetworkThin
-from network_mobilenet_try import MobilenetNetworkTry
-from network_mobilenet_try2 import MobilenetNetworkTry2
-from network_mobilenet_try3 import MobilenetNetworkTry3
 
-from src.network_cmu import CmuNetwork
+from network_cmu import CmuNetwork
 
 
 def _get_base_path():
@@ -23,32 +19,17 @@ def get_network(type, placeholder_input, sess_for_load=None, trainable=True):
         pretrain_path = 'pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
         last_layer = 'MConv_Stage6_L{aux}_5'
     elif type == 'mobilenet_fast':
-        net = MobilenetNetwork({'image': placeholder_input}, conv_width=0.75, conv_width2=0.50, trainable=trainable)
+        net = MobilenetNetwork({'image': placeholder_input}, conv_width=0.5, conv_width2=0.5, trainable=trainable)
         pretrain_path = 'pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
         last_layer = 'MConv_Stage6_L{aux}_5'
+    elif type == 'mobilenet_accurate':
+        net = MobilenetNetwork({'image': placeholder_input}, conv_width=1.00, conv_width2=1.00, trainable=trainable)
+        pretrain_path = 'pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_0.75_224.ckpt'
+        last_layer = 'MConv_Stage6_L{aux}_5'
+
     elif type == 'mobilenet_thin':
         net = MobilenetNetworkThin({'image': placeholder_input}, conv_width=0.75, conv_width2=0.50, trainable=trainable)
         pretrain_path = 'pretrained/mobilenet_v1_0.75_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
-        last_layer = 'MConv_Stage6_L{aux}_5'
-
-    elif type == 'hybridnet_try':
-        net = HybridNetworkTry({'image': placeholder_input}, conv_width2=1.00, trainable=trainable)
-        pretrain_path = 'numpy/openpose_vgg16.npy'
-        last_layer = 'MConv_Stage6_L{aux}_5'
-
-    elif type == 'mobilenet_try':
-        net = MobilenetNetworkTry({'image': placeholder_input}, conv_width=1.00, conv_width2=1.00, trainable=trainable)
-        pretrain_path = 'pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
-        last_layer = 'MConv_Stage6_L{aux}_5'
-
-    elif type == 'mobilenet_try2':
-        net = MobilenetNetworkTry2({'image': placeholder_input}, conv_width=1.00, conv_width2=1.00, trainable=trainable)
-        pretrain_path = 'pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
-        last_layer = 'MConv_Stage6_L{aux}_5'
-
-    elif type == 'mobilenet_try3':
-        net = MobilenetNetworkTry3({'image': placeholder_input}, conv_width=1.00, conv_width2=1.00, trainable=trainable)
-        pretrain_path = 'pretrained/mobilenet_v1_1.0_224_2017_06_14/mobilenet_v1_1.0_224.ckpt'
         last_layer = 'MConv_Stage6_L{aux}_5'
 
     elif type == 'cmu':
@@ -81,12 +62,13 @@ def get_network(type, placeholder_input, sess_for_load=None, trainable=True):
 
 def get_graph_path(model_name):
     return {
-        'cmu_320x240': './models/graph/cmu_320x240/graph_opt.pb',
-        'cmu_480x320': './models/graph/cmu_480x320/graph_opt.pb',
         'cmu_640x480': './models/graph/cmu_640x480/graph_opt.pb',
-        'mobilenet_320x240': './models/graph/mobilenet_320x240/graph_opt.pb',
-        'mobilenet_fast_320x240': './models/graph/mobilenet_fast_320x240/graph_opt.pb',
-        'mobilenet_thin_368x368': './models/trained/mobilenet_thin_368x368/graph_opt.pb'
+        'cmuq_640x480': './models/graph/cmu_640x480/graph_q.pb',
+
+        'cmu_640x360': './models/graph/cmu_640x360/graph_opt.pb',
+        'cmuq_640x360': './models/graph/cmu_640x360/graph_q.pb',
+
+        'mobilenet_thin_432x368': './models/graph/mobilenet_thin_432x368/graph_opt.pb',
     }[model_name]
 
 

@@ -6,17 +6,17 @@ import logging
 import os
 import time
 
-from src.pose_dataset import get_dataflow_batch, DataFlowToQueue, CocoPose
-from src.pose_augment import set_network_input_wh, set_network_scale
-from src.common import get_sample_images
 
 import cv2
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
-
-from src.networks import get_network
 from tensorpack.dataflow.remote import RemoteDataZMQ
+
+from pose_dataset import get_dataflow_batch, DataFlowToQueue, CocoPose
+from pose_augment import set_network_input_wh, set_network_scale
+from common import get_sample_images
+from networks import get_network
 
 logger = logging.getLogger('train')
 logger.setLevel(logging.DEBUG)
@@ -175,6 +175,8 @@ if __name__ == '__main__':
 
         if args.checkpoint:
             logger.info('Restore from checkpoint...')
+            # loader = tf.train.Saver(net.restorable_variables())
+            # loader.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
             saver.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
             logger.info('Restore from checkpoint...Done')
         elif pretrain_path:

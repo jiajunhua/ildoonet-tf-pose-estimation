@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
-from src import common
+import common
 
 DEFAULT_PADDING = 'SAME'
 
@@ -173,9 +173,9 @@ class BaseNetwork(object):
                                                   trainable=self.trainable,
                                                   depth_multiplier=1.0,
                                                   kernel_size=[k_h, k_w],
-                                                  activation_fn=common.activation_fn if relu else None,
-                                                  # activation_fn=None,
-                                                  normalizer_fn=slim.batch_norm,
+                                                  # activation_fn=common.activation_fn if relu else None,
+                                                  activation_fn=None,
+                                                  # normalizer_fn=slim.batch_norm,
                                                   weights_initializer=_init_xavier,
                                                   # weights_initializer=_init_norm,
                                                   weights_regularizer=_l2_regularizer_00004,

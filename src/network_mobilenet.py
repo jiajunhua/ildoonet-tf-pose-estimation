@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from src import network_base
+import network_base
 
 
 class MobilenetNetwork(network_base.BaseNetwork):

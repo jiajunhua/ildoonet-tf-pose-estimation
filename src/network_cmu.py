@@ -1,4 +1,5 @@
-from src import network_base
+import network_base
+import tensorflow as tf
 
 
 class CmuNetwork(network_base.BaseNetwork):
@@ -139,9 +140,10 @@ class CmuNetwork(network_base.BaseNetwork):
              .conv(1, 1, 128, 1, 1, name='Mconv6_stage6_L2')
              .conv(1, 1, 19, 1, 1, relu=False, name='Mconv7_stage6_L2'))
 
-        (self.feed('Mconv7_stage6_L2',
-                   'Mconv7_stage6_L1')
-             .concat(3, name='Openpose/concat_stage7'))
+        with tf.variable_scope('Openpose'):
+            (self.feed('Mconv7_stage6_L2',
+                       'Mconv7_stage6_L1')
+                 .concat(3, name='concat_stage7'))
 
     def loss_l1_l2(self):
          l1s = []

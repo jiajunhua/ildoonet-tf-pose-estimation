@@ -3,7 +3,7 @@ from tensorpack import imgaug
 from tensorpack.dataflow.common import MapDataComponent, MapData
 from tensorpack.dataflow.image import AugmentImageComponent
 
-from src.pose_augment import *
+from pose_augment import *
 
 
 def get_idx_hands_up():

@@ -1,16 +1,15 @@
 import itertools
+import logging
 import math
 from collections import namedtuple
 
-import logging
-import numpy as np
 import cv2
+import numpy as np
 import tensorflow as tf
 from scipy.ndimage import maximum_filter, gaussian_filter
 
-from src import common
-from src.common import CocoPairsNetwork, CocoPairs, CocoPart
-
+import common
+from common import CocoPairsNetwork, CocoPairs, CocoPart
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.INFO)
@@ -61,6 +60,9 @@ class Human:
     def get_max_score(self):
         return max([x.score for _, x in self.body_parts.items()])
 
+    def __str__(self):
+        return ' '.join([str(x) for x in self.body_parts.values()])
+
 
 class BodyPart:
     """
@@ -80,7 +82,7 @@ class BodyPart:
         return CocoPart(self.part_idx)
 
     def __str__(self):
-        return 'BodyPart:%d-(%d, %d) score=%.2f' % (self.part_idx, self.x, self.y, self.score)
+        return 'BodyPart:%d-(%.2f, %.2f) score=%.2f' % (self.part_idx, self.x, self.y, self.score)
 
 
 class PoseEstimator:
@@ -90,9 +92,9 @@ class PoseEstimator:
 
     NMS_Threshold = 0.2
     Local_PAF_Threshold = 0.2
-    PAF_Count_Threshold = 6
+    PAF_Count_Threshold = 5
     Part_Count_Threshold = 4
-    Part_Score_Threshold = 0.8
+    Part_Score_Threshold = 0.6
 
     PartPair = namedtuple('PartPair', [
         'score',
@@ -145,7 +147,7 @@ class PoseEstimator:
                 coords[part_idx1], coords[part_idx2],
                 paf_mat[paf_x_idx], paf_mat[paf_y_idx],
                 heatmap=heat_mat,
-                rescale=(1 / heat_mat.shape[2], 1 / heat_mat.shape[1])
+                rescale=(1.0 / heat_mat.shape[2], 1.0 / heat_mat.shape[1])
             )
 
             pairs_by_conn.extend(pairs)
@@ -252,7 +254,6 @@ class TfPoseEstimator:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())
 
-        tf.Graph()
         self.graph = tf.get_default_graph()
         tf.import_graph_def(graph_def, name='TfPoseEstimator')
         self.persistent_sess = tf.Session(graph=self.graph)

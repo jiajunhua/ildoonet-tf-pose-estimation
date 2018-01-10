@@ -1,4 +1,4 @@
-from src import network_base
+import network_base
 
 
 class DSConvNetwork(network_base.BaseNetwork):

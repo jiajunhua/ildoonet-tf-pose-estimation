@@ -4,9 +4,9 @@ import time
 
 import cv2
 import numpy as np
-from src.estimator import TfPoseEstimator
 
-from src.networks import get_graph_path, model_wh
+from estimator import TfPoseEstimator
+from networks import get_graph_path, model_wh
 
 logger = logging.getLogger('TfPoseEstimator-WebCam')
 logger.setLevel(logging.DEBUG)

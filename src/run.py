@@ -2,14 +2,14 @@ import argparse
 import logging
 import time
 
+import common
 import cv2
 import numpy as np
+from estimator import TfPoseEstimator
+from networks import get_graph_path, model_wh
 
-from lifting.draw import plot_pose
 from lifting.prob_model import Prob3dPose
-from src import common
-from src.estimator import TfPoseEstimator
-from src.networks import get_graph_path, model_wh
+from lifting.draw import plot_pose
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.DEBUG)
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     # parser.add_argument('--image', type=str, default='/Users/ildoonet/Downloads/me.jpg')
     parser.add_argument('--image', type=str, default='./images/apink2.jpg')
     # parser.add_argument('--model', type=str, default='mobilenet_320x240', help='cmu / mobilenet_320x240')
-    parser.add_argument('--model', type=str, default='mobilenet_thin_368x368', help='cmu / mobilenet_320x240 / mobilenet_thin_368x368')
+    parser.add_argument('--model', type=str, default='mobilenet_thin_432x368', help='cmu_640x480 / mobilenet_thin_432x368')
     args = parser.parse_args()
 
     w, h = model_wh(args.model)
@@ -41,11 +41,14 @@ if __name__ == '__main__':
 
     image = cv2.imread(args.image, cv2.IMREAD_COLOR)
     image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
-    # cv2.imshow('tf-pose-estimation result', image)
-    # cv2.waitKey()
+    cv2.imshow('tf-pose-estimation result', image)
+    cv2.waitKey()
+
+    import sys
+    sys.exit(0)
 
     logger.info('3d lifting initialization.')
-    poseLifting = Prob3dPose('./lifting/models/prob_model_params.mat')
+    poseLifting = Prob3dPose('./src/lifting/models/prob_model_params.mat')
 
     image_h, image_w = image.shape[:2]
     standard_w = 640

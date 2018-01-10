@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="video" default="$(find tfpose_ros)/etcs/dance.mp4" />
+    <arg name="video_width" default="1280" />
+    <arg name="video_height" default="720" />
+
+    <arg name="gpuid" default="0" />
+
+    <arg name="model" default="mobilenet_thin_432x368" />
+    <!--
+    <arg name="model" default="cmu_640x360" />
+    -->
+
+    <node name="pose_estimator" pkg="tfpose_ros" type="broadcaster_ros.py" output="screen" required="true">
+        <env name="CUDA_VISIBLE_DEVICES" value="$(arg gpuid)" />
+        <param name="camera" value="/videofile/image_raw" />
+        <param name="model" value="$(arg model)" />
+    </node>
+
+    <node name="pose_estimator_vis" pkg="tfpose_ros" type="visualization.py" output="screen" required="true">
+        <param name="camera" value="/videofile/image_raw" />
+        <param name="pose" value="/pose_estimator/pose" />
+        <param name="resize_ratio" value="0.3" />
+    </node>
+
+    <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen" required="true">
+        <remap from="image" to="/pose_estimator_vis/output"/>
+        <param name="autosize" value="true" />
+    </node>
+
+    <include file="$(find video_stream_opencv)/launch/camera.launch">
+        <arg name="camera_name" value="videofile" />
+        <!-- means video device 0, /dev/video0 -->
+        <arg name="video_stream_provider" value="$(arg video)" />
+        <!-- throttling the querying of frames to -->
+        <arg name="fps" value="30" />
+        <!-- setting frame_id -->
+        <arg name="frame_id" value="videofile_frame" />
+        <arg name="width" value="$(arg video_width)"/>
+        <arg name="height" value="$(arg video_height)"/>
+        <arg name="visualize" value="true" />
+    </include>
+
+</launch>

@@ -97,3 +97,17 @@ $ bazel-bin/tensorflow/tools/graph_transforms/transform_graph \
     fold_old_batch_norms
     fold_batch_norms'
 ```
+
+Also, It is promising to quantize neural network in 8 bit to get futher improvement for speed. In my case, this will make inference less accurate and take more time on Intel's CPUs.
+ 
+```
+$ bazel-bin/tensorflow/tools/graph_transforms/transform_graph \
+  --in_graph=/Users/ildoonet/repos/tf-openpose/tmp/cmu_640x480/graph_opt.pb \
+  --out_graph=/Users/ildoonet/repos/tf-openpose/tmp/cmu_640x480/graph_q.pb \
+  --inputs='image' \
+  --outputs='Openpose/concat_stage7:0' \
+  --transforms='add_default_attributes strip_unused_nodes(type=float, shape="1,360,640,3")
+    remove_nodes(op=Identity, op=CheckNumerics) fold_constants(ignore_errors=true)
+    fold_batch_norms fold_old_batch_norms quantize_weights quantize_nodes
+    strip_unused_nodes sort_by_execution_order'
+```
