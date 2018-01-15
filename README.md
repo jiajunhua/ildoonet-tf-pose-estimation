@@ -93,6 +93,11 @@ You can test the inference feature with a single image.
 $ python3 run.py --model=mobilenet_thin_432x368 --image=...
 ```
 
+The image flag MUST be relative to the src folder with no "~", i.e:
+```
+--image ../../Desktop
+```
+
 Then you will see the screen as below with pafmap, heatmap, result and etc.
 
 ![inferent_result](./etcs/inference_result2.png)
