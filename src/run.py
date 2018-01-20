@@ -26,15 +26,21 @@ if __name__ == '__main__':
     parser.add_argument('--image', type=str, default='./images/apink2.jpg')
     # parser.add_argument('--model', type=str, default='mobilenet_320x240', help='cmu / mobilenet_320x240')
     parser.add_argument('--model', type=str, default='mobilenet_thin_432x368', help='cmu_640x480 / cmu_640x360 / mobilenet_thin_432x368')
+    parser.add_argument('--scales', type=str, default='[None]', help='for multiple scales, eg. [1.0, (1.1, 0.05)]')
     args = parser.parse_args()
+    scales = ast.literal_eval(scales)
 
     w, h = model_wh(args.model)
     e = TfPoseEstimator(get_graph_path(args.model), target_size=(w, h))
 
     # estimate human poses from a single image !
-    image = common.read_imgfile(args.image, w, h)
+    image = common.read_imgfile(args.image, None, None)
+    # image = cv2.fastNlMeansDenoisingColored(image, None, 10, 10, 7, 21)
     t = time.time()
-    humans = e.inference(image)
+    humans = e.inference(image, scales=[None])
+    # humans = e.inference(image, scales=[None, (0.7, 0.5, 1.8)])
+    # humans = e.inference(image, scales=[(1.2, 0.05)])
+    # humans = e.inference(image, scales=[(0.2, 0.2, 1.4)])
     elapsed = time.time() - t
 
     logger.info('inference image: %s in %.4f seconds.' % (args.image, elapsed))

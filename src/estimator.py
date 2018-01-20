@@ -90,11 +90,11 @@ class PoseEstimator:
     heatmap_gaussian = False
     adaptive_threshold = False
 
-    NMS_Threshold = 0.1
-    Local_PAF_Threshold = 0.1
+    NMS_Threshold = 0.15
+    Local_PAF_Threshold = 0.2
     PAF_Count_Threshold = 5
     Part_Count_Threshold = 4
-    Part_Score_Threshold = 0.6
+    Part_Score_Threshold = 4.5
 
     PartPair = namedtuple('PartPair', [
         'score',
@@ -246,6 +246,8 @@ class PoseEstimator:
 
 
 class TfPoseEstimator:
+    ENSEMBLE = 'addup'        # average, addup
+
     def __init__(self, graph_path, target_size=(320, 240)):
         self.target_size = target_size
 
@@ -311,23 +313,134 @@ class TfPoseEstimator:
 
         return npimg
 
-    def inference(self, npimg):
-        if npimg.shape[:2] != (self.target_size[1], self.target_size[0]):
-            # resize
-            npimg = cv2.resize(npimg, self.target_size)
+    def _get_scaled_img(self, npimg, scale):
+        get_base_scale = lambda s, w, h: max(self.target_size[0] / float(w), self.target_size[1] / float(h)) * s
+        img_h, img_w = npimg.shape[:2]
+
+        if scale is None:
+            if npimg.shape[:2] != (self.target_size[1], self.target_size[0]):
+                # resize
+                npimg = cv2.resize(npimg, self.target_size)
+            return [npimg], [(0.0, 0.0, 1.0, 1.0)]
+        elif isinstance(scale, float):
+            # scaling with center crop
+            base_scale = get_base_scale(scale, img_w, img_h)
+            npimg = cv2.resize(npimg, dsize=None, fx=base_scale, fy=base_scale)
+            ratio_x = (1. - self.target_size[0] / float(npimg.shape[1])) / 2.0
+            ratio_y = (1. - self.target_size[1] / float(npimg.shape[0])) / 2.0
+            roi = self._crop_roi(npimg, ratio_x, ratio_y)
+            return [roi], [(ratio_x, ratio_y, 1.-ratio_x*2, 1.-ratio_y*2)]
+        elif isinstance(scale, tuple) and len(scale) == 2:
+            # scaling with sliding window : (scale, step)
+            base_scale = get_base_scale(scale[0], img_w, img_h)
+            base_scale_w = self.target_size[0] / (img_w * base_scale)
+            base_scale_h = self.target_size[1] / (img_h * base_scale)
+            npimg = cv2.resize(npimg, dsize=None, fx=base_scale, fy=base_scale)
+            window_step = scale[1]
+            rois = []
+            infos = []
+            for ratio_x, ratio_y in itertools.product(np.arange(0., 1.01 - base_scale_w, window_step),
+                                                      np.arange(0., 1.01 - base_scale_h, window_step)):
+                roi = self._crop_roi(npimg, ratio_x, ratio_y)
+                rois.append(roi)
+                infos.append((ratio_x, ratio_y, base_scale_w, base_scale_h))
+            return rois, infos
+        elif isinstance(scale, tuple) and len(scale) == 3:
+            # scaling with ROI : (want_x, want_y, scale_ratio)
+            base_scale = get_base_scale(scale[2], img_w, img_h)
+            npimg = cv2.resize(npimg, dsize=None, fx=base_scale, fy=base_scale)
+            ratio_w = self.target_size[0] / float(npimg.shape[1])
+            ratio_h = self.target_size[1] / float(npimg.shape[0])
+
+            want_x, want_y = scale[:2]
+            ratio_x = want_x - ratio_w / 2.
+            ratio_y = want_y - ratio_h / 2.
+            ratio_x = max(ratio_x, 0.0)
+            ratio_y = max(ratio_y, 0.0)
+            if ratio_x + ratio_w > 1.0:
+                ratio_x = 1. - ratio_w
+            if ratio_y + ratio_h > 1.0:
+                ratio_y = 1. - ratio_h
+
+            roi = self._crop_roi(npimg, ratio_x, ratio_y)
+            return [roi], [(ratio_x, ratio_y, ratio_w, ratio_h)]
+
+    def _crop_roi(self, npimg, ratio_x, ratio_y):
+        target_w, target_h = self.target_size
+        h, w = npimg.shape[:2]
+        x = max(int(w*ratio_x-.5), 0)
+        y = max(int(h*ratio_y-.5), 0)
+        cropped = npimg[y:y+target_h, x:x+target_w]
+
+        cropped_h, cropped_w = cropped.shape[:2]
+        if cropped_w < target_w or cropped_h < target_h:
+            npblank = np.zeros((self.target_size[1], self.target_size[0], 3), dtype=np.uint8)
+
+            copy_x, copy_y = (target_w - cropped_w) // 2, (target_h - cropped_h) // 2
+            npblank[copy_y:, copy_x:] = cropped
+        else:
+            return cropped
+
+    def inference(self, npimg, scales=None):
+        if not isinstance(scales, list):
+            scales = [None]
 
         if self.tensor_image.dtype == tf.quint8:
             # quantize input image
             npimg = TfPoseEstimator._quantize_img(npimg)
             pass
 
+        rois = []
+        infos = []
+        for scale in scales:
+            roi, info = self._get_scaled_img(npimg, scale)
+            # for dubug...
+            # print(roi[0].shape)
+            # cv2.imshow('a', roi[0])
+            # cv2.waitKey()
+            rois.extend(roi)
+            infos.extend(info)
+
         logger.debug('inference+')
-        output = self.persistent_sess.run(self.tensor_output, feed_dict={self.tensor_image: [npimg]})
+        output = self.persistent_sess.run(self.tensor_output, feed_dict={self.tensor_image: rois})
+        heatMats = output[:, :, :, :19]
+        pafMats = output[:, :, :, 19:]
         logger.debug('inference-')
 
-        self.heatMat = output[0, :, :, :19]
-        self.pafMat = output[0, :, :, 19:]
+        output_h, output_w = output.shape[1:3]
+        max_ratio_w = max_ratio_h = 10000.0
+        for info in infos:
+            max_ratio_w = min(max_ratio_w, info[2])
+            max_ratio_h = min(max_ratio_h, info[3])
+        mat_w, mat_h = int(output_w/max_ratio_w), int(output_h/max_ratio_h)
+        resized_heatMat = np.zeros((mat_h, mat_w, 19), dtype=np.float32)
+        resized_pafMat = np.zeros((mat_h, mat_w, 38), dtype=np.float32)
+        resized_cntMat = np.zeros((mat_h, mat_w, 1), dtype=np.float32)
+        resized_cntMat += 1e-12
+
+        for heatMat, pafMat, info in zip(heatMats, pafMats, infos):
+            w, h = int(info[2]*mat_w), int(info[3]*mat_h)
+            heatMat = cv2.resize(heatMat, (w, h))
+            pafMat = cv2.resize(pafMat, (w, h))
+            x, y = int(info[0] * mat_w), int(info[1] * mat_h)
+
+            if TfPoseEstimator.ENSEMBLE == 'average':
+                # average
+                resized_heatMat[max(0, y):y + h, max(0, x):x + w, :] += heatMat[max(0, -y):, max(0, -x):, :]
+                resized_pafMat[max(0,y):y+h, max(0, x):x+w, :] += pafMat[max(0, -y):, max(0, -x):, :]
+                resized_cntMat[max(0,y):y+h, max(0, x):x+w, :] += 1
+            else:
+                # add up
+                resized_heatMat[max(0, y):y + h, max(0, x):x + w, :] = np.maximum(resized_heatMat[max(0, y):y + h, max(0, x):x + w, :], heatMat[max(0, -y):, max(0, -x):, :])
+                resized_pafMat[max(0,y):y+h, max(0, x):x+w, :] += pafMat[max(0, -y):, max(0, -x):, :]
+                resized_cntMat[max(0, y):y + h, max(0, x):x + w, :] += 1
+
+        if TfPoseEstimator.ENSEMBLE == 'average':
+            self.heatMat = resized_heatMat / resized_cntMat
+            self.pafMat = resized_pafMat / resized_cntMat
+        else:
+            self.heatMat = resized_heatMat
+            self.pafMat = resized_pafMat / (np.log(resized_cntMat) + 1)
 
         humans = PoseEstimator.estimate(self.heatMat, self.pafMat)
         return humans
-

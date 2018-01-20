@@ -31,7 +31,7 @@
         <param name="output_width" type="int" value="640" />
         <param name="output_height" type="int" value="720" />
         <param name="output_format" value="xvid" />
-        <param name="output_path" value="/data/private/pose_ros_cmu.mp4" />
+        <param name="output_path" value="" />
 
         <param name="output_topic" value="~output" />
 

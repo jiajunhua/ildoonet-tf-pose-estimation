@@ -2,7 +2,9 @@
 import time
 import os
 import sys
+import ast
 
+from threading import Lock
 import rospy
 import rospkg
 from cv_bridge import CvBridge, CvBridgeError
@@ -41,7 +43,14 @@ def callback_image(data):
         rospy.logerr('[ros-video-recorder][VideoFrames] Converting Image Error. ' + str(e))
         return
 
-    humans = pose_estimator.inference(cv_image)
+    acquired = tf_lock.acquire(False)
+    if not acquired:
+        return
+
+    try:
+        humans = pose_estimator.inference(cv_image, scales)
+    finally:
+        tf_lock.release()
 
     msg = humans_to_msg(humans)
     msg.image_w = data.width
@@ -59,6 +68,11 @@ if __name__ == '__main__':
     # parameters
     image_topic = rospy.get_param('~camera', '')
     model = rospy.get_param('~model', 'cmu_640x480')
+    scales = rospy.get_param('~scales', '[None]')
+    scales = ast.literal_eval(scales)
+    tf_lock = Lock()
+
+    rospy.loginfo('[TfPoseEstimatorROS] scales(%d)=%s' % (len(scales), str(scales)))
 
     if not image_topic:
         rospy.logerr('Parameter \'camera\' is not provided.')
@@ -77,7 +91,7 @@ if __name__ == '__main__':
     pose_estimator = TfPoseEstimator(graph_path, target_size=(w, h))
     cv_bridge = CvBridge()
 
-    rospy.Subscriber(image_topic, Image, callback_image, queue_size=1)
+    rospy.Subscriber(image_topic, Image, callback_image, queue_size=1, buff_size=2**24)
     pub_pose = rospy.Publisher('~pose', Persons, queue_size=1)
 
     rospy.loginfo('start+')
