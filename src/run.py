@@ -1,6 +1,7 @@
 import argparse
 import logging
 import time
+import ast
 
 import common
 import cv2
