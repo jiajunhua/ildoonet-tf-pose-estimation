@@ -1,6 +1,7 @@
 import argparse
 import logging
 import time
+import ast
 
 import common
 import cv2
@@ -23,12 +24,12 @@ logger.addHandler(ch)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='tf-pose-estimation run')
     # parser.add_argument('--image', type=str, default='/Users/ildoonet/Downloads/me.jpg')
-    parser.add_argument('--image', type=str, default='./images/apink2.jpg')
+    parser.add_argument('--image', type=str, default='./images/night_bad3.jpg')
     # parser.add_argument('--model', type=str, default='mobilenet_320x240', help='cmu / mobilenet_320x240')
     parser.add_argument('--model', type=str, default='mobilenet_thin_432x368', help='cmu_640x480 / cmu_640x360 / mobilenet_thin_432x368')
     parser.add_argument('--scales', type=str, default='[None]', help='for multiple scales, eg. [1.0, (1.1, 0.05)]')
     args = parser.parse_args()
-    scales = ast.literal_eval(scales)
+    scales = ast.literal_eval(args.scales)
 
     w, h = model_wh(args.model)
     e = TfPoseEstimator(get_graph_path(args.model), target_size=(w, h))
