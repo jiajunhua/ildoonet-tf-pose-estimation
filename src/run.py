@@ -46,10 +46,40 @@ if __name__ == '__main__':
 
     logger.info('inference image: %s in %.4f seconds.' % (args.image, elapsed))
 
-    image = cv2.imread(args.image, cv2.IMREAD_COLOR)
     image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
-    cv2.imshow('tf-pose-estimation result', image)
-    cv2.waitKey()
+    # cv2.imshow('tf-pose-estimation result', image)
+    # cv2.waitKey()
+
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure()
+    a = fig.add_subplot(2, 2, 1)
+    a.set_title('Result')
+    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+
+    # show network output
+    a = fig.add_subplot(2, 2, 2)
+    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(heatmap.shape[1], heatmap.shape[0])), alpha=0.5)
+    tmp = np.amax(e.heatMat[:, :, :-1], axis=2)
+    plt.imshow(tmp, cmap=plt.cm.gray, alpha=0.5)
+    plt.colorbar()
+
+    tmp2 = e.pafMat.transpose((2, 0, 1))
+    tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
+    tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
+
+    a = fig.add_subplot(2, 2, 3)
+    a.set_title('Vectormap-x')
+    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
+    plt.imshow(tmp2_odd, cmap=plt.cm.gray, alpha=0.5)
+    plt.colorbar()
+
+    a = fig.add_subplot(2, 2, 4)
+    a.set_title('Vectormap-y')
+    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
+    plt.imshow(tmp2_even, cmap=plt.cm.gray, alpha=0.5)
+    plt.colorbar()
+    plt.show()
 
     import sys
     sys.exit(0)
@@ -72,36 +102,6 @@ if __name__ == '__main__':
     visibilities = np.array(visibilities)
     transformed_pose2d, weights = poseLifting.transform_joints(pose_2d_mpiis, visibilities)
     pose_3d = poseLifting.compute_3d(transformed_pose2d, weights)
-
-    import matplotlib.pyplot as plt
-
-    fig = plt.figure()
-    a = fig.add_subplot(2, 2, 1)
-    a.set_title('Result')
-    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-
-    # show network output
-    a = fig.add_subplot(2, 2, 2)
-    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(heatmap.shape[1], heatmap.shape[0])), alpha=0.5)
-    tmp = np.amax(e.heatMat, axis=2)
-    plt.imshow(tmp, cmap=plt.cm.gray, alpha=0.5)
-    plt.colorbar()
-
-    tmp2 = e.pafMat.transpose((2, 0, 1))
-    tmp2_odd = np.amax(np.absolute(tmp2[::2, :, :]), axis=0)
-    tmp2_even = np.amax(np.absolute(tmp2[1::2, :, :]), axis=0)
-
-    a = fig.add_subplot(2, 2, 3)
-    a.set_title('Vectormap-x')
-    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
-    plt.imshow(tmp2_odd, cmap=plt.cm.gray, alpha=0.5)
-    plt.colorbar()
-
-    a = fig.add_subplot(2, 2, 4)
-    a.set_title('Vectormap-y')
-    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(vectmap.shape[1], vectmap.shape[0])), alpha=0.5)
-    plt.imshow(tmp2_even, cmap=plt.cm.gray, alpha=0.5)
-    plt.colorbar()
 
     for i, single_3d in enumerate(pose_3d):
         plot_pose(single_3d)
