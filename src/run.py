@@ -38,7 +38,7 @@ if __name__ == '__main__':
     image = common.read_imgfile(args.image, None, None)
     # image = cv2.fastNlMeansDenoisingColored(image, None, 10, 10, 7, 21)
     t = time.time()
-    humans = e.inference(image, scales=[None])
+    humans = e.inference(image, scales=scales)
     # humans = e.inference(image, scales=[None, (0.7, 0.5, 1.8)])
     # humans = e.inference(image, scales=[(1.2, 0.05)])
     # humans = e.inference(image, scales=[(0.2, 0.2, 1.4)])
@@ -57,9 +57,12 @@ if __name__ == '__main__':
     a.set_title('Result')
     plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
 
+    bgimg = cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_BGR2RGB)
+    bgimg = cv2.resize(bgimg, (e.heatMat.shape[1], e.heatMat.shape[0]), interpolation=cv2.INTER_AREA)
+
     # show network output
     a = fig.add_subplot(2, 2, 2)
-    # plt.imshow(CocoPose.get_bgimg(inp, target_size=(heatmap.shape[1], heatmap.shape[0])), alpha=0.5)
+    plt.imshow(bgimg, alpha=0.5)
     tmp = np.amax(e.heatMat[:, :, :-1], axis=2)
     plt.imshow(tmp, cmap=plt.cm.gray, alpha=0.5)
     plt.colorbar()

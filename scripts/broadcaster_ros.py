@@ -8,11 +8,15 @@ from threading import Lock
 import rospy
 import rospkg
 from cv_bridge import CvBridge, CvBridgeError
+from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from tfpose_ros.msg import Persons, Person, BodyPartElm
 
 from estimator import TfPoseEstimator
 from networks import model_wh, get_graph_path
+
+
+scales = [None]
 
 
 def humans_to_msg(humans):
@@ -40,7 +44,7 @@ def callback_image(data):
     try:
         cv_image = cv_bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
-        rospy.logerr('[ros-video-recorder][VideoFrames] Converting Image Error. ' + str(e))
+        rospy.logerr('[tf-pose-estimation] Converting Image Error. ' + str(e))
         return
 
     acquired = tf_lock.acquire(False)
@@ -48,6 +52,7 @@ def callback_image(data):
         return
 
     try:
+        global scales
         humans = pose_estimator.inference(cv_image, scales)
     finally:
         tf_lock.release()
@@ -61,15 +66,23 @@ def callback_image(data):
     # rospy.loginfo(time.time() - et)
 
 
+def callback_scales(data):
+    global scales
+    scales = ast.literal_eval(data.data)
+    rospy.loginfo('[tf-pose-estimation] scale changed: ' + str(scales))
+
+
 if __name__ == '__main__':
+    global scales
+
     rospy.loginfo('initialization+')
-    rospy.init_node('TfPoseEstimatorROS', anonymous=True)
+    rospy.init_node('TfPoseEstimatorROS', anonymous=True, log_level=rospy.DEBUG)
 
     # parameters
     image_topic = rospy.get_param('~camera', '')
     model = rospy.get_param('~model', 'cmu_640x480')
-    scales = rospy.get_param('~scales', '[None]')
-    scales = ast.literal_eval(scales)
+    scales_str = rospy.get_param('~scales', '[None]')
+    scales = ast.literal_eval(scales_str)
     tf_lock = Lock()
 
     rospy.loginfo('[TfPoseEstimatorROS] scales(%d)=%s' % (len(scales), str(scales)))
@@ -92,6 +105,7 @@ if __name__ == '__main__':
     cv_bridge = CvBridge()
 
     rospy.Subscriber(image_topic, Image, callback_image, queue_size=1, buff_size=2**24)
+    rospy.Subscriber('~scales', String, callback_scales, queue_size=1)
     pub_pose = rospy.Publisher('~pose', Persons, queue_size=1)
 
     rospy.loginfo('start+')
