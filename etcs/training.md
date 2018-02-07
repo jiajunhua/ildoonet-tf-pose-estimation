@@ -12,7 +12,7 @@ $ git clone https://github.com/cocodataset/cocoapi
 $ cd cocoapi/PythonAPI
 $ python3 setup.py build_ext --inplace
 $ python3 setup.py build_ext install
-
+```
 
 ### Augmentation
 
