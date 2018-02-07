@@ -26,7 +26,10 @@ if __name__ == '__main__':
     # parser.add_argument('--image', type=str, default='/Users/ildoonet/Downloads/me.jpg')
     parser.add_argument('--image', type=str, default='./images/night_bad3.jpg')
     # parser.add_argument('--model', type=str, default='mobilenet_320x240', help='cmu / mobilenet_320x240')
-    parser.add_argument('--model', type=str, default='mobilenet_thin_432x368', help='cmu_640x480 / cmu_640x360 / mobilenet_thin_432x368')
+    parser.add_argument(
+        '--model', type=str, default='mobilenet_thin_432x368',
+        help='cmu_{width}x{height} / mobilenet_thin_432x368'
+    )
     parser.add_argument('--scales', type=str, default='[None]', help='for multiple scales, eg. [1.0, (1.1, 0.05)]')
     args = parser.parse_args()
     scales = ast.literal_eval(args.scales)

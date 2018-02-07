@@ -106,7 +106,7 @@ ENV/
 timeline*.json
 
 tmp
-models/graph/cmu_*/*.pb
+models/graph/cmu*/*.pb
 models/trained/*/checkpoint
 models/trained/*/*.pb
 models/trained/*/model-*.data-*
