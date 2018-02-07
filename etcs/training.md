@@ -6,12 +6,13 @@ You should download COCO Dataset from http://cocodataset.org/#download
 
 Also, you need to install cocoapi for easy parsing : https://github.com/cocodataset/cocoapi
 
-'''
+
+```
 $ git clone https://github.com/cocodataset/cocoapi
 $ cd cocoapi/PythonAPI
 $ python3 setup.py build_ext --inplace
 $ python3 setup.py build_ext install
-'''
+
 
 ### Augmentation
 
