@@ -7,14 +7,16 @@
     <arg name="gpuid" default="0" />
 
     <!--
-    <arg name="model" default="mobilenet_thin_432x368" />
+    <arg name="model" default="mobilenet_thin" />
     -->
-    <arg name="model" default="cmu_640x360" />
+    <arg name="model" default="cmu" />
+    <arg name="resolution" default="432x368" />
 
     <node name="pose_estimator" pkg="tfpose_ros" type="broadcaster_ros.py" output="screen" required="true">
         <env name="CUDA_VISIBLE_DEVICES" value="$(arg gpuid)" />
         <param name="camera" value="/videofile/image_raw" />
         <param name="model" value="$(arg model)" />
+        <param name="resolution" value="$(arg resolution)" />
     </node>
 
     <node name="pose_estimator_vis" pkg="tfpose_ros" type="visualization.py" output="screen" required="true">

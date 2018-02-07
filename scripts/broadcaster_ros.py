@@ -80,7 +80,8 @@ if __name__ == '__main__':
 
     # parameters
     image_topic = rospy.get_param('~camera', '')
-    model = rospy.get_param('~model', 'cmu_640x480')
+    model = rospy.get_param('~model', 'cmu')
+    resolution = rospy.get_param('~resolution', '432x368')
     scales_str = rospy.get_param('~scales', '[None]')
     scales = ast.literal_eval(scales_str)
     tf_lock = Lock()
@@ -92,7 +93,7 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     try:
-        w, h = model_wh(model)
+        w, h = model_wh(resolution)
         graph_path = get_graph_path(model)
 
         rospack = rospkg.RosPack()
