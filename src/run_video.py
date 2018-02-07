@@ -23,13 +23,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='tf-pose-estimation Video')
     parser.add_argument('--video', type=str, default='')
     parser.add_argument('--zoom', type=float, default=1.0)
-    parser.add_argument('--model', type=str, default='mobilenet_thin_432x368', help='cmu_640x480 / cmu_640x360 / mobilenet_thin_432x368')
+    parser.add_argument('--resolution', type=str, default='432x368', help='network input resolution. default=432x368')
+    parser.add_argument('--model', type=str, default='mobilenet_thin', help='cmu / mobilenet_thin')
     parser.add_argument('--show-process', type=bool, default=False,
                         help='for debug purpose, if enabled, speed for inference is dropped.')
     args = parser.parse_args()
 
     logger.debug('initialization %s : %s' % (args.model, get_graph_path(args.model)))
-    w, h = model_wh(args.model)
+    w, h = model_wh(args.resolution)
     e = TfPoseEstimator(get_graph_path(args.model), target_size=(w, h))
     #logger.debug('cam read+')
     #cam = cv2.VideoCapture(args.camera)

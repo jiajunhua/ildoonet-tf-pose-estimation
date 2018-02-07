@@ -15,6 +15,10 @@ Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
 Implemented features are listed here : [features](./etcs/feature.md)
 
+## Important Updates
+
+2018.2.7 Arguments in run.py script changed. Support dynamic input size.
+
 ## Install
 
 ### Dependencies
@@ -60,16 +64,13 @@ I have tried multiple variations of models to find optmized network architecture
 
 Before running demo, you should download graph files. You can deploy this graph on your mobile or other platforms.
 
-- cmu_640x360
-- cmu_640x480
-- mobilenet_thin_432x368
+- cmu (trained in 656x368)
+- mobilenet_thin (trained in 432x368)
 
-CMU's model graphs are too large for git, so I uploaded them on dropbox. You should download them if you want to use cmu's original model.
+CMU's model graphs are too large for git, so I uploaded them on an external cloud. You should download them if you want to use cmu's original model. Download scripts are provided in the model folder.
 
 ```
-$ cd models/graph/cmu_640x360
-$ bash download.sh
-$ cd models/graph/cmu_640x480
+$ cd models/graph/cmu
 $ bash download.sh
 ```
 
@@ -90,7 +91,7 @@ $ bash download.sh
 You can test the inference feature with a single image.
 
 ```
-$ python3 run.py --model=mobilenet_thin_432x368 --image=...
+$ python3 run.py --model=mobilenet_thin --resolution=432x368 --image=...
 ```
 
 The image flag MUST be relative to the src folder with no "~", i.e:
@@ -105,7 +106,7 @@ Then you will see the screen as below with pafmap, heatmap, result and etc.
 ### Realtime Webcam
 
 ```
-$ python3 run_webcam.py --model=mobilenet_thin_432x368 --camera=0
+$ python3 run_webcam.py --model=mobilenet_thin --resolution=432x368 --camera=0
 ```
 
 Then you will see the realtime webcam screen with estimated poses as below. This [Realtime Result](./etcs/openpose_macbook13_mobilenet2.gif) was recored on macbook pro 13" with 3.1Ghz Dual-Core CPU.

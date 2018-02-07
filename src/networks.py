@@ -50,8 +50,7 @@ def get_network(type, placeholder_input, sess_for_load=None, trainable=True):
                 raise Exception('Model file doesn\'t exist, path=%s' % pretrain_path_full)
             net.load(os.path.join(_get_base_path(), pretrain_path), sess_for_load)
         else:
-            # s = '%dx%d' % (placeholder_input.shape[2], placeholder_input.shape[1])
-            s = '432x368'
+            s = '%dx%d' % (placeholder_input.shape[2], placeholder_input.shape[1])
             ckpts = {
                 'mobilenet': 'trained/mobilenet_%s/model-246038' % s,
                 'mobilenet_thin': 'trained/mobilenet_thin_%s/model-449003' % s,
@@ -73,30 +72,14 @@ def get_graph_path(model_name):
         'cmu': './models/graph/cmu/graph_opt.pb',
         'mobilenet_thin': './models/graph/mobilenet_thin/graph_opt.pb'
     }
-    for name in dyn_graph_path.keys():
-        if name in model_name:
-            graph_path = dyn_graph_path[name]
-            if not os.path.isfile(graph_path):
-                raise Exception('Graph file doesn\'t exist, path=%s' % graph_path)
-            return graph_path
-
-    graph_path = {
-        # 'cmu_640x480': './models/graph/cmu_640x480/graph_opt.pb',
-        # 'cmuq_640x480': './models/graph/cmu_640x480/graph_q.pb',
-        # 'cmu_640x360': './models/graph/cmu_640x360/graph_opt.pb',
-        # 'cmuq_640x360': './models/graph/cmu_640x360/graph_q.pb',
-
-        # 'mobilenet_thin_432x368': './models/graph/mobilenet_thin_432x368/graph_opt.pb',
-    }[model_name]
-
+    graph_path = dyn_graph_path[model_name]
     if not os.path.isfile(graph_path):
         raise Exception('Graph file doesn\'t exist, path=%s' % graph_path)
-
     return graph_path
 
 
-def model_wh(model_name):
-    width, height = map(int, model_name.split('_')[-1].split('x'))
+def model_wh(resolution_str):
+    width, height = map(int, resolution_str.split('x'))
     if width % 16 != 0 or height % 16 != 0:
         raise Exception('Width and height should be multiples of 16. w=%d, h=%d' % (width, height))
     return int(width), int(height)

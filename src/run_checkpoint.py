@@ -19,10 +19,10 @@ if __name__ == '__main__':
     While training, checkpoints are saved. You can test them with this python code.
     """
     parser = argparse.ArgumentParser(description='Tensorflow Pose Estimation Graph Extractor')
-    parser.add_argument('--model', type=str, default='cmu', help='cmu / mobilenet / mobilenet_thin')
+    parser.add_argument('--model', type=str, default='mobilenet_thin', help='cmu / mobilenet / mobilenet_thin')
     args = parser.parse_args()
 
-    input_node = tf.placeholder(tf.float32, shape=(1, 368, 432, 3), name='image')
+    input_node = tf.placeholder(tf.float32, shape=(None, None, None, 3), name='image')
 
     with tf.Session(config=config) as sess:
         net, _, last_layer = get_network(args.model, input_node, sess, trainable=False)
