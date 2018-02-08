@@ -6,12 +6,13 @@ You should download COCO Dataset from http://cocodataset.org/#download
 
 Also, you need to install cocoapi for easy parsing : https://github.com/cocodataset/cocoapi
 
-'''
+
+```
 $ git clone https://github.com/cocodataset/cocoapi
 $ cd cocoapi/PythonAPI
 $ python3 setup.py build_ext --inplace
 $ python3 setup.py build_ext install
-'''
+```
 
 ### Augmentation
 
@@ -42,7 +43,7 @@ If you want to reproduce the original paper's result, the following setting is r
 
 As you can see from the table above, training loss was converged at the almost same trends with the original paper.
  
-The mobilenet versions has slightly poor loss value compared to the original one. Training losses are 3~8% larger, though validation losses are 5~14% larger.
+The mobilenet versions has slightly poor loss value compared to the original one. Training losses are 3 to 8% larger, though validation losses are 5 to 14% larger.
 
 
 ### Run for Faster Training
