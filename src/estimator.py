@@ -377,7 +377,7 @@ class TfPoseEstimator:
             npblank = np.zeros((self.target_size[1], self.target_size[0], 3), dtype=np.uint8)
 
             copy_x, copy_y = (target_w - cropped_w) // 2, (target_h - cropped_h) // 2
-            npblank[copy_y:, copy_x:] = cropped
+            npblank[copy_y:copy_y+cropped_h, copy_x:copy_x+cropped_w] = cropped
         else:
             return cropped
 
