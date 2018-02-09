@@ -69,14 +69,14 @@ def callback_image(data):
 def callback_scales(data):
     global scales
     scales = ast.literal_eval(data.data)
-    rospy.loginfo('[tf-pose-estimation] scale changed: ' + str(scales))
+    rospy.logdebug('[tf-pose-estimation] scale changed: ' + str(scales))
 
 
 if __name__ == '__main__':
     global scales
 
     rospy.loginfo('initialization+')
-    rospy.init_node('TfPoseEstimatorROS', anonymous=True, log_level=rospy.DEBUG)
+    rospy.init_node('TfPoseEstimatorROS', anonymous=True, log_level=rospy.INFO)
 
     # parameters
     image_topic = rospy.get_param('~camera', '')
