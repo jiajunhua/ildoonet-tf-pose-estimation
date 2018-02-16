@@ -382,6 +382,9 @@ class TfPoseEstimator:
             return cropped
 
     def inference(self, npimg, scales=None):
+        if npimg is None:
+            raise Exception('The image is not valid. Please check your image exists.')
+
         if not isinstance(scales, list):
             scales = [None]
 
