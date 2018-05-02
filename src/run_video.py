@@ -18,6 +18,12 @@ logger.addHandler(ch)
 
 fps_time = 0
 
+stringToBool(input_str):
+    if input_str.lower() in ('true', '1'):
+        return True
+    elif input_str.lower() in ('false', '0'):
+        return False
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='tf-pose-estimation Video')
@@ -27,6 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='mobilenet_thin', help='cmu / mobilenet_thin')
     parser.add_argument('--show-process', type=bool, default=False,
                         help='for debug purpose, if enabled, speed for inference is dropped.')
+    parser.add_argument('--showBG', type=stringToBool, default=True, help='False to show skeleton only.')
     args = parser.parse_args()
 
     logger.debug('initialization %s : %s' % (args.model, get_graph_path(args.model)))
@@ -44,6 +51,7 @@ if __name__ == '__main__':
 
 
         humans = e.inference(image)
+        if args.showBG == False: image = np.zeros(image.shape)
         image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
 
         #logger.debug('show+')
