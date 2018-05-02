@@ -24,7 +24,7 @@ import tensorflow as tf
 from tensorpack.dataflow import MultiThreadMapData
 from tensorpack.dataflow.image import MapDataComponent
 from tensorpack.dataflow.common import BatchData, MapData
-from tensorpack.dataflow.prefetch import PrefetchData
+from tensorpack.dataflow.parallel import PrefetchData
 from tensorpack.dataflow.base import RNGDataFlow, DataFlowTerminated
 
 from pycocotools.coco import COCO
@@ -397,7 +397,7 @@ def get_dataflow_batch(path, is_train, batchsize, img_path=None):
 
 class DataFlowToQueue(threading.Thread):
     def __init__(self, ds, placeholders, queue_size=5):
-        super(DataFlowToQueue).__init__()
+        super().__init__()
         self.daemon = True
 
         self.ds = ds
@@ -425,7 +425,7 @@ class DataFlowToQueue(threading.Thread):
 
     def start(self):
         self._sess = tf.get_default_session()
-        super(DataFlowToQueue).start()
+        super().start()
 
     def set_coordinator(self, coord):
         self._coord = coord
