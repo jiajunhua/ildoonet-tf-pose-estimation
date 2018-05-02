@@ -375,6 +375,14 @@ def get_dataflow(path, is_train, img_path=None):
     return ds
 
 
+def _get_dataflow_onlyread(path, is_train, img_path=None):
+    ds = CocoPose(path, img_path, is_train)  # read data from lmdb
+    ds = MapData(ds, read_image_url)
+    ds = MapData(ds, pose_to_img)
+    # ds = PrefetchData(ds, 1000, multiprocessing.cpu_count() * 4)
+    return ds
+
+
 def get_dataflow_batch(path, is_train, batchsize, img_path=None):
     logger.info('dataflow img_path=%s' % img_path)
     ds = get_dataflow(path, is_train, img_path=img_path)
@@ -459,15 +467,18 @@ class DataFlowToQueue(threading.Thread):
 if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
-    from src.pose_augment import set_network_input_wh
+    from pose_augment import set_network_input_wh, set_network_scale
     # set_network_input_wh(368, 368)
     set_network_input_wh(480, 320)
+    set_network_scale(8)
 
-    df = get_dataflow('/root/coco/annotations', True, img_path='http://gpu-twg.kakaocdn.net/braincloud/COCO/')
+    # df = get_dataflow('/data/public/rw/coco/annotations', True, '/data/public/rw/coco/')
+    df = _get_dataflow_onlyread('/data/public/rw/coco/annotations', True, '/data/public/rw/coco/')
     # df = get_dataflow('/root/coco/annotations', False, img_path='http://gpu-twg.kakaocdn.net/braincloud/COCO/')
 
-    # TestDataSpeed(df).start()
-    # sys.exit(0)
+    from tensorpack.dataflow.common import TestDataSpeed
+    TestDataSpeed(df).start()
+    sys.exit(0)
 
     with tf.Session() as sess:
         df.reset_state()

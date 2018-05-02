@@ -6,7 +6,6 @@ import logging
 import os
 import time
 
-
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -30,14 +29,14 @@ logger.addHandler(ch)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training codes for Openpose using Tensorflow')
     parser.add_argument('--model', default='mobilenet', help='model name')
-    parser.add_argument('--datapath', type=str, default='/root/coco/annotations')
-    parser.add_argument('--imgpath', type=str, default='/root/coco/')
+    parser.add_argument('--datapath', type=str, default='/data/public/rw/coco/annotations')
+    parser.add_argument('--imgpath', type=str, default='/data/public/rw/coco/')
     parser.add_argument('--batchsize', type=int, default=96)
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--max-epoch', type=int, default=30)
     parser.add_argument('--lr', type=str, default='0.01')
-    parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-models-2018-1/')
-    parser.add_argument('--logpath', type=str, default='/data/private/tf-openpose-log-2018-1/')
+    parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-models-2018-2/')
+    parser.add_argument('--logpath', type=str, default='/data/private/tf-openpose-log-2018-2/')
     parser.add_argument('--checkpoint', type=str, default='')
     parser.add_argument('--tag', type=str, default='')
     parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
@@ -60,7 +59,7 @@ if __name__ == '__main__':
     output_w, output_h = args.input_width // scale, args.input_height // scale
 
     logger.info('define model+')
-    with tf.device(tf.DeviceSpec(device_type="GPU", device_index=0)):
+    with tf.device(tf.DeviceSpec(device_type="CPU")):
         input_node = tf.placeholder(tf.float32, shape=(args.batchsize, args.input_height, args.input_width, 3), name='image')
         vectmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 38), name='vectmap')
         heatmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 19), name='heatmap')
@@ -113,7 +112,7 @@ if __name__ == '__main__':
 
     outputs = tf.concat(outputs, axis=0)
 
-    with tf.device(tf.DeviceSpec(device_type="GPU", device_index=gpu_id)):
+    with tf.device(tf.DeviceSpec(device_type="CPU")):
         # define loss
         total_loss = tf.reduce_sum(losses) / args.batchsize
         total_loss_ll_paf = tf.reduce_sum(last_losses_l1) / args.batchsize
