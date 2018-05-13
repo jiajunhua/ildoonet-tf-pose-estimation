@@ -1,5 +1,6 @@
 import sys
 
+import abc
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
@@ -59,6 +60,7 @@ class BaseNetwork(object):
                                                        name='use_dropout')
         self.setup()
 
+    @abc.abstractmethod
     def setup(self):
         '''Construct the network. '''
         raise NotImplementedError('Must be implemented by the subclass.')
@@ -140,10 +142,9 @@ class BaseNetwork(object):
 
     @layer
     def normalize_vgg(self, input, name):
-        # normalize input -1.0 ~ 1.0
-        input = tf.divide(input, 255.0, name=name + '_divide')
+        # normalize input -0.5 ~ 0.5
+        input = tf.divide(input, 256.0, name=name + '_divide')
         input = tf.subtract(input, 0.5, name=name + '_subtract')
-        input = tf.multiply(input, 2.0, name=name + '_multiply')
         return input
 
     @layer

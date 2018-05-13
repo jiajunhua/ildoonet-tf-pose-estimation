@@ -22,16 +22,23 @@ fps_time = 0
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='tf-pose-estimation realtime webcam')
     parser.add_argument('--camera', type=int, default=0)
-    parser.add_argument('--zoom', type=float, default=1.0)
-    parser.add_argument('--resolution', type=str, default='432x368', help='network input resolution. default=432x368')
+
+    parser.add_argument('--resize', type=str, default='0x0',
+                        help='if provided, resize images before they are processed. default=0x0, Recommends : 432x368 or 656x368 or 1312x736 ')
+    parser.add_argument('--resize-out-ratio', type=float, default=4.0,
+                        help='if provided, resize heatmaps before they are post-processed. default=1.0')
+
     parser.add_argument('--model', type=str, default='mobilenet_thin', help='cmu / mobilenet_thin')
     parser.add_argument('--show-process', type=bool, default=False,
                         help='for debug purpose, if enabled, speed for inference is dropped.')
     args = parser.parse_args()
 
     logger.debug('initialization %s : %s' % (args.model, get_graph_path(args.model)))
-    w, h = model_wh(args.resolution)
-    e = TfPoseEstimator(get_graph_path(args.model), target_size=(w, h))
+    w, h = model_wh(args.resize)
+    if w > 0 and h > 0:
+        e = TfPoseEstimator(get_graph_path(args.model), target_size=(w, h))
+    else:
+        e = TfPoseEstimator(get_graph_path(args.model), target_size=(432, 368))
     logger.debug('cam read+')
     cam = cv2.VideoCapture(args.camera)
     ret_val, image = cam.read()
@@ -39,20 +46,6 @@ if __name__ == '__main__':
 
     while True:
         ret_val, image = cam.read()
-
-        logger.debug('image preprocess+')
-        if args.zoom < 1.0:
-            canvas = np.zeros_like(image)
-            img_scaled = cv2.resize(image, None, fx=args.zoom, fy=args.zoom, interpolation=cv2.INTER_LINEAR)
-            dx = (canvas.shape[1] - img_scaled.shape[1]) // 2
-            dy = (canvas.shape[0] - img_scaled.shape[0]) // 2
-            canvas[dy:dy + img_scaled.shape[0], dx:dx + img_scaled.shape[1]] = img_scaled
-            image = canvas
-        elif args.zoom > 1.0:
-            img_scaled = cv2.resize(image, None, fx=args.zoom, fy=args.zoom, interpolation=cv2.INTER_LINEAR)
-            dx = (img_scaled.shape[1] - image.shape[1]) // 2
-            dy = (img_scaled.shape[0] - image.shape[0]) // 2
-            image = img_scaled[dy:image.shape[0], dx:image.shape[1]]
 
         logger.debug('image process+')
         humans = e.inference(image)
