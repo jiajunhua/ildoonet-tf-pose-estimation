@@ -209,7 +209,7 @@ int get_part_x(int cid) {
 int get_part_y(int cid) {
     return peak_infos_line[cid].y;
 }
-int get_part_score(int cid) {
+float get_part_score(int cid) {
     return peak_infos_line[cid].score;
 }
 

@@ -56,6 +56,6 @@ int get_part_cid(int human_id, int part_id);
 int get_score(int human_id);
 int get_part_x(int cid);
 int get_part_y(int cid);
-int get_part_score(int cid);
+float get_part_score(int cid);
 
 #endif
