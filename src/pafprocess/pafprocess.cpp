@@ -159,9 +159,9 @@ int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, fl
                 if (membership == 0) {
                     for (int subset_id = 0; subset_id < 18; subset_id ++) subset[subset_idx1][subset_id] += (subset[subset_idx2][subset_id] + 1);
 
-                    subset[subset_idx1][-1] += subset[subset_idx2][-1];
-                    subset[subset_idx1][-2] += subset[subset_idx2][-2];
-                    subset[subset_idx1][-2] += conns[conn_id].score;
+                    subset[subset_idx1][19] += subset[subset_idx2][19];
+                    subset[subset_idx1][18] += subset[subset_idx2][18];
+                    subset[subset_idx1][18] += conns[conn_id].score;
                     subset.erase(subset.begin() + subset_idx2);
                 } else {
                     subset[subset_idx1][part_id2] = conns[conn_id].cid2;
@@ -199,8 +199,8 @@ int get_part_cid(int human_id, int part_id) {
     return subset[human_id][part_id];
 }
 
-int get_score(int human_id) {
-    return subset[human_id][-2];
+float get_score(int human_id) {
+    return subset[human_id][18] / subset[human_id][19];
 }
 
 int get_part_x(int cid) {
