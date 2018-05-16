@@ -98,7 +98,7 @@ $ bash download.sh
 You can test the inference feature with a single image.
 
 ```
-$ python3 run.py --model=mobilenet_thin --resolution=432x368 --image=...
+$ python3 run.py --model=mobilenet_thin --resize=432x368 --image=../images/p1.jpg
 ```
 
 The image flag MUST be relative to the src folder with no "~", i.e:
