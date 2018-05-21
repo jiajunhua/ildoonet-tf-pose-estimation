@@ -52,7 +52,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from nets import resnet_utils
+from slim.nets import resnet_utils
 
 slim = tf.contrib.slim
 resnet_arg_scope = resnet_utils.resnet_arg_scope
@@ -212,7 +212,7 @@ def resnet_v2(inputs,
           # Global average pooling.
           net = tf.reduce_mean(net, [1, 2], name='pool5', keep_dims=True)
           end_points['global_pool'] = net
-        if num_classes is not None:
+        if num_classes:
           net = slim.conv2d(net, num_classes, [1, 1], activation_fn=None,
                             normalizer_fn=None, scope='logits')
           end_points[sc.name + '/logits'] = net

@@ -1,9 +1,11 @@
 argparse
 matplotlib
 scipy
+scikit-image
 tqdm
 requests
 fire
-ast
 dill
 git+https://github.com/ppwwyyxx/tensorpack.git
+slidingwindow
+psutil

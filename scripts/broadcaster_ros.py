@@ -16,9 +16,6 @@ from estimator import TfPoseEstimator
 from networks import model_wh, get_graph_path
 
 
-scales = [None]
-
-
 def humans_to_msg(humans):
     persons = Persons()
 
@@ -52,8 +49,7 @@ def callback_image(data):
         return
 
     try:
-        global scales
-        humans = pose_estimator.inference(cv_image, scales)
+        humans = pose_estimator.inference(cv_image, resize_to_default=True, upsample_size=resize_out_ratio)
     finally:
         tf_lock.release()
 
@@ -63,30 +59,19 @@ def callback_image(data):
     msg.header = data.header
 
     pub_pose.publish(msg)
-    # rospy.loginfo(time.time() - et)
-
-
-def callback_scales(data):
-    global scales
-    scales = ast.literal_eval(data.data)
-    rospy.logdebug('[tf-pose-estimation] scale changed: ' + str(scales))
 
 
 if __name__ == '__main__':
-    global scales
-
     rospy.loginfo('initialization+')
     rospy.init_node('TfPoseEstimatorROS', anonymous=True, log_level=rospy.INFO)
 
     # parameters
     image_topic = rospy.get_param('~camera', '')
     model = rospy.get_param('~model', 'cmu')
-    resolution = rospy.get_param('~resolution', '432x368')
-    scales_str = rospy.get_param('~scales', '[None]')
-    scales = ast.literal_eval(scales_str)
-    tf_lock = Lock()
 
-    rospy.loginfo('[TfPoseEstimatorROS] scales(%d)=%s' % (len(scales), str(scales)))
+    resolution = rospy.get_param('~resolution', '432x368')
+    resize_out_ratio = float(rospy.get_param('~resize_out_ratio', '4.0'))
+    tf_lock = Lock()
 
     if not image_topic:
         rospy.logerr('Parameter \'camera\' is not provided.')
@@ -106,7 +91,6 @@ if __name__ == '__main__':
     cv_bridge = CvBridge()
 
     rospy.Subscriber(image_topic, Image, callback_image, queue_size=1, buff_size=2**24)
-    rospy.Subscriber('~scales', String, callback_scales, queue_size=1)
     pub_pose = rospy.Publisher('~pose', Persons, queue_size=1)
 
     rospy.loginfo('start+')

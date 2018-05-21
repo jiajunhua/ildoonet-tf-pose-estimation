@@ -28,7 +28,7 @@ logger.addHandler(ch)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training codes for Openpose using Tensorflow')
-    parser.add_argument('--model', default='mobilenet', help='model name')
+    parser.add_argument('--model', default='personlab_resnet101', help='model name')
     parser.add_argument('--datapath', type=str, default='/data/public/rw/coco/annotations')
     parser.add_argument('--imgpath', type=str, default='/data/public/rw/coco/')
     parser.add_argument('--batchsize', type=int, default=96)

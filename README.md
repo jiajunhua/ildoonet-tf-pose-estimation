@@ -29,6 +29,13 @@ You need dependencies below.
 - tensorflow 1.4.1+
 - opencv3, protobuf, python3-tk
 
+### Opensources
+
+- slim
+- slidingwindow
+  - https://github.com/adamrehn/slidingwindow
+  - I copied from the above git repo to modify few things.
+
 ### Install
 
 ```bash
@@ -91,7 +98,7 @@ $ bash download.sh
 You can test the inference feature with a single image.
 
 ```
-$ python3 run.py --model=mobilenet_thin --resolution=432x368 --image=...
+$ python3 run.py --model=mobilenet_thin --resize=432x368 --image=../images/p1.jpg
 ```
 
 The image flag MUST be relative to the src folder with no "~", i.e:
@@ -142,6 +149,8 @@ See : [etcs/training.md](./etcs/training.md)
 [3] Custom Caffe by Openpose : https://github.com/CMU-Perceptual-Computing-Lab/caffe_train
 
 [4] Keras Openpose : https://github.com/michalfaber/keras_Realtime_Multi-Person_Pose_Estimation
+
+[5] Keras Openpose2 : https://github.com/kevinlin311tw/keras-openpose-reproduce
 
 ### Lifting from the deep
 

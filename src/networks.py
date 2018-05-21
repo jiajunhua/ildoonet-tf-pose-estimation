@@ -5,6 +5,7 @@ from network_mobilenet import MobilenetNetwork
 from network_mobilenet_thin import MobilenetNetworkThin
 
 from network_cmu import CmuNetwork
+from network_personlab import PersonLabNetwork
 
 
 def _get_base_path():
@@ -39,6 +40,11 @@ def get_network(type, placeholder_input, sess_for_load=None, trainable=True):
     elif type == 'vgg':
         net = CmuNetwork({'image': placeholder_input}, trainable=trainable)
         pretrain_path = 'numpy/openpose_vgg16.npy'
+        last_layer = 'Mconv7_stage6_L{aux}'
+
+    elif type == 'personlab_resnet101':
+        net = PersonLabNetwork({'image': placeholder_input}, trainable=trainable)
+        pretrain_path = 'pretrained/resnet_v2_101/resnet_v2_101.ckpt'
         last_layer = 'Mconv7_stage6_L{aux}'
     else:
         raise Exception('Invalid Mode.')
