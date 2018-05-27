@@ -48,7 +48,7 @@ if __name__ == '__main__':
         ret_val, image = cam.read()
 
         logger.debug('image process+')
-        humans = e.inference(image)
+        humans = e.inference(image, resize_to_default=(w > 0 and h > 0), upsample_size=args.resize_out_ratio)
 
         logger.debug('postprocess+')
         image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
