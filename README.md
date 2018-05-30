@@ -45,7 +45,7 @@ $ cd tf-openpose
 $ pip3 install -r requirements.txt
 ```
 
-### Alternative Install
+### Alternative Package Install
 
 ```bash
 $ git clone https://www.github.com/ildoonet/tf-openpose
@@ -53,7 +53,8 @@ $ cd tf-openpose
 $ python setup.py install
 ```
 
-#### Test package
+#### Test installed package
+![package_install_result](./etcs/imgcat0.gif)
 ```bash
 python -c 'import tf_pose; tf_pose.infer(image="./images/p1.jpg")'
 ```
