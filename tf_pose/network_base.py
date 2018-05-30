@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import sys
 
 import abc
@@ -5,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
-import common
+from tf_pose import common
 
 DEFAULT_PADDING = 'SAME'
 

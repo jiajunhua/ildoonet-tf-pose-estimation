@@ -1,6 +1,8 @@
+from __future__ import absolute_import
+
 import tensorflow as tf
 
-import network_base
+from tf_pose import network_base
 
 
 class MobilenetNetworkThin(network_base.BaseNetwork):
@@ -35,7 +37,7 @@ class MobilenetNetworkThin(network_base.BaseNetwork):
         (self.feed('Conv2d_3').max_pool(2, 2, 2, 2, name='Conv2d_3_pool'))
 
         (self.feed('Conv2d_3_pool', 'Conv2d_7', 'Conv2d_11')
-            .concat(3, name='feat_concat'))
+         .concat(3, name='feat_concat'))
 
         feature_lv = 'feat_concat'
         with tf.variable_scope(None, 'Openpose'):

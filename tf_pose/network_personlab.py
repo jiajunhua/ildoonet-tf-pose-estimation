@@ -1,5 +1,7 @@
-import network_base
-from slim.nets.resnet_v2 import resnet_v2_101
+from __future__ import absolute_import
+
+from tf_pose import network_base
+from tf_pose.slim.nets.resnet_v2 import resnet_v2_101
 
 
 class PersonLabNetwork(network_base.BaseNetwork):

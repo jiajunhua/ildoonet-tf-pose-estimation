@@ -2,8 +2,8 @@ import argparse
 
 from tensorpack.dataflow.remote import send_dataflow_zmq
 
-from pose_dataset import get_dataflow_batch
-from pose_augment import set_network_input_wh, set_network_scale
+from tf_pose.pose_dataset import get_dataflow_batch
+from tf_pose.pose_augment import set_network_input_wh, set_network_scale
 
 if __name__ == '__main__':
     """

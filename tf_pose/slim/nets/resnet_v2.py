@@ -52,7 +52,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from slim.nets import resnet_utils
+from tf_pose.slim.nets import resnet_utils
 
 slim = tf.contrib.slim
 resnet_arg_scope = resnet_utils.resnet_arg_scope

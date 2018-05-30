@@ -1,11 +1,11 @@
 import os
 
 import tensorflow as tf
-from network_mobilenet import MobilenetNetwork
-from network_mobilenet_thin import MobilenetNetworkThin
+from tf_pose.network_mobilenet import MobilenetNetwork
+from tf_pose.network_mobilenet_thin import MobilenetNetworkThin
 
-from network_cmu import CmuNetwork
-from network_personlab import PersonLabNetwork
+from tf_pose.network_cmu import CmuNetwork
+from tf_pose.network_personlab import PersonLabNetwork
 
 
 def _get_base_path():

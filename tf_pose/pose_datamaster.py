@@ -4,7 +4,7 @@ import time
 
 from tensorpack.dataflow.remote import RemoteDataZMQ
 
-from pose_dataset import CocoPose
+from tf_pose.pose_dataset import CocoPose
 
 logging.basicConfig(level=logging.DEBUG, format='[lmdb_dataset] %(asctime)s %(levelname)s %(message)s')
 

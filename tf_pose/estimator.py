@@ -2,15 +2,15 @@ import logging
 
 import slidingwindow as sw
 
-from pafprocess import pafprocess
+from tf_pose.pafprocess import pafprocess
 import cv2
 import numpy as np
 import tensorflow as tf
 import time
 
-import common
-from common import CocoPart
-from tensblur.smoother import Smoother
+from tf_pose import common
+from tf_pose.common import CocoPart
+from tf_pose.tensblur.smoother import Smoother
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.INFO)
@@ -65,6 +65,9 @@ class Human:
     def __str__(self):
         return ' '.join([str(x) for x in self.body_parts.values()])
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class BodyPart:
     """
@@ -85,6 +88,9 @@ class BodyPart:
 
     def __str__(self):
         return 'BodyPart:%d-(%.2f, %.2f) score=%.2f' % (self.part_idx, self.x, self.y, self.score)
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class PoseEstimator:
@@ -146,21 +152,25 @@ class TfPoseEstimator:
         self.tensor_output = self.graph.get_tensor_by_name('TfPoseEstimator/Openpose/concat_stage7:0')
         self.tensor_heatMat = self.tensor_output[:, :, :, :19]
         self.tensor_pafMat = self.tensor_output[:, :, :, 19:]
-        self.upsample_size = tf.placeholder(dtype=tf.int32, shape=(2, ), name='upsample_size')
-        self.tensor_heatMat_up = tf.image.resize_area(self.tensor_output[:, :, :, :19], self.upsample_size, align_corners=False, name='upsample_heatmat')
-        self.tensor_pafMat_up = tf.image.resize_area(self.tensor_output[:, :, :, 19:], self.upsample_size, align_corners=False, name='upsample_pafmat')
+        self.upsample_size = tf.placeholder(dtype=tf.int32, shape=(2,), name='upsample_size')
+        self.tensor_heatMat_up = tf.image.resize_area(self.tensor_output[:, :, :, :19], self.upsample_size,
+                                                      align_corners=False, name='upsample_heatmat')
+        self.tensor_pafMat_up = tf.image.resize_area(self.tensor_output[:, :, :, 19:], self.upsample_size,
+                                                     align_corners=False, name='upsample_pafmat')
         smoother = Smoother({'data': self.tensor_heatMat_up}, 25, 3.0)
         gaussian_heatMat = smoother.get_output()
 
         max_pooled_in_tensor = tf.nn.pool(gaussian_heatMat, window_shape=(3, 3), pooling_type='MAX', padding='SAME')
-        self.tensor_peaks = tf.where(tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat, tf.zeros_like(gaussian_heatMat))
+        self.tensor_peaks = tf.where(tf.equal(gaussian_heatMat, max_pooled_in_tensor), gaussian_heatMat,
+                                     tf.zeros_like(gaussian_heatMat))
 
         self.heatMat = self.pafMat = None
 
         # warm-up
         self.persistent_sess.run(tf.variables_initializer(
             [v for v in tf.global_variables() if
-             v.name.split(':')[0] in [x.decode('utf-8') for x in self.persistent_sess.run(tf.report_uninitialized_variables())]
+             v.name.split(':')[0] in [x.decode('utf-8') for x in
+                                      self.persistent_sess.run(tf.report_uninitialized_variables())]
              ])
         )
         self.persistent_sess.run(
@@ -192,7 +202,7 @@ class TfPoseEstimator:
     @staticmethod
     def _quantize_img(npimg):
         npimg_q = npimg + 1.0
-        npimg_q /= (2.0 / 2**8)
+        npimg_q /= (2.0 / 2 ** 8)
         # npimg_q += 0.5
         npimg_q = npimg_q.astype(np.uint8)
         return npimg_q
@@ -219,7 +229,7 @@ class TfPoseEstimator:
                 if pair[0] not in human.body_parts.keys() or pair[1] not in human.body_parts.keys():
                     continue
 
-                #npimg = cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
+                # npimg = cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
                 cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
 
         return npimg
@@ -266,13 +276,16 @@ class TfPoseEstimator:
             npimg = cv2.resize(npimg, dsize=None, fx=base_scale, fy=base_scale, interpolation=cv2.INTER_CUBIC)
             o_size_h, o_size_w = npimg.shape[:2]
             if npimg.shape[0] < self.target_size[1] or npimg.shape[1] < self.target_size[0]:
-                newimg = np.zeros((max(self.target_size[1], npimg.shape[0]), max(self.target_size[0], npimg.shape[1]), 3), dtype=np.uint8)
+                newimg = np.zeros(
+                    (max(self.target_size[1], npimg.shape[0]), max(self.target_size[0], npimg.shape[1]), 3),
+                    dtype=np.uint8)
                 newimg[:npimg.shape[0], :npimg.shape[1], :] = npimg
                 npimg = newimg
 
             window_step = scale[1]
 
-            windows = sw.generate(npimg, sw.DimOrder.HeightWidthChannel, self.target_size[0], self.target_size[1], window_step)
+            windows = sw.generate(npimg, sw.DimOrder.HeightWidthChannel, self.target_size[0], self.target_size[1],
+                                  window_step)
 
             rois = []
             ratios = []
@@ -281,7 +294,8 @@ class TfPoseEstimator:
                 roi = npimg[indices]
                 rois.append(roi)
                 ratio_x, ratio_y = float(indices[1].start) / o_size_w, float(indices[0].start) / o_size_h
-                ratio_w, ratio_h = float(indices[1].stop - indices[1].start) / o_size_w, float(indices[0].stop - indices[0].start) / o_size_h
+                ratio_w, ratio_h = float(indices[1].stop - indices[1].start) / o_size_w, float(
+                    indices[0].stop - indices[0].start) / o_size_h
                 ratios.append((ratio_x, ratio_y, ratio_w, ratio_h))
 
             return rois, ratios
@@ -308,16 +322,16 @@ class TfPoseEstimator:
     def _crop_roi(self, npimg, ratio_x, ratio_y):
         target_w, target_h = self.target_size
         h, w = npimg.shape[:2]
-        x = max(int(w*ratio_x-.5), 0)
-        y = max(int(h*ratio_y-.5), 0)
-        cropped = npimg[y:y+target_h, x:x+target_w]
+        x = max(int(w * ratio_x - .5), 0)
+        y = max(int(h * ratio_y - .5), 0)
+        cropped = npimg[y:y + target_h, x:x + target_w]
 
         cropped_h, cropped_w = cropped.shape[:2]
         if cropped_w < target_w or cropped_h < target_h:
             npblank = np.zeros((self.target_size[1], self.target_size[0], 3), dtype=np.uint8)
 
             copy_x, copy_y = (target_w - cropped_w) // 2, (target_h - cropped_h) // 2
-            npblank[copy_y:copy_y+cropped_h, copy_x:copy_x+cropped_w] = cropped
+            npblank[copy_y:copy_y + cropped_h, copy_x:copy_x + cropped_w] = cropped
         else:
             return cropped
 
@@ -339,13 +353,15 @@ class TfPoseEstimator:
         img = npimg
         if resize_to_default:
             img = self._get_scaled_img(npimg, None)[0][0]
-        peaks, heatMat_up, pafMat_up = self.persistent_sess.run([self.tensor_peaks, self.tensor_heatMat_up, self.tensor_pafMat_up], feed_dict={
-            self.tensor_image: [img], self.upsample_size: upsample_size
-        })
+        peaks, heatMat_up, pafMat_up = self.persistent_sess.run(
+            [self.tensor_peaks, self.tensor_heatMat_up, self.tensor_pafMat_up], feed_dict={
+                self.tensor_image: [img], self.upsample_size: upsample_size
+            })
         peaks = peaks[0]
         self.heatMat = heatMat_up[0]
         self.pafMat = pafMat_up[0]
-        logger.debug('inference- heatMat=%dx%d pafMat=%dx%d' % (self.heatMat.shape[1], self.heatMat.shape[0], self.pafMat.shape[1], self.pafMat.shape[0]))
+        logger.debug('inference- heatMat=%dx%d pafMat=%dx%d' % (
+        self.heatMat.shape[1], self.heatMat.shape[0], self.pafMat.shape[1], self.pafMat.shape[0]))
 
         t = time.time()
         humans = PoseEstimator.estimate_paf(peaks, self.heatMat, self.pafMat)
@@ -355,6 +371,7 @@ class TfPoseEstimator:
 
 if __name__ == '__main__':
     import pickle
+
     f = open('./etcs/heatpaf1.pkl', 'rb')
     data = pickle.load(f)
     logger.info('size={}'.format(data['heatMat'].shape))
@@ -362,5 +379,6 @@ if __name__ == '__main__':
 
     t = time.time()
     humans = PoseEstimator.estimate_paf(data['peaks'], data['heatMat'], data['pafMat'])
-    dt = time.time() - t; t = time.time()
+    dt = time.time() - t;
+    t = time.time()
     logger.info('elapsed #humans=%d time=%.8f' % (len(humans), dt))
