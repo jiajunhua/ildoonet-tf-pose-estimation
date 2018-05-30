@@ -45,6 +45,20 @@ $ cd tf-openpose
 $ pip3 install -r requirements.txt
 ```
 
+### Alternative Install
+
+```bash
+$ git clone https://www.github.com/ildoonet/tf-openpose
+$ cd tf-openpose
+$ python setup.py install
+```
+
+#### Test package
+```bash
+python -c 'import tf_pose; tf_pose.infer(image="./images/p1.jpg")'
+```
+
+
 ## Models
 
 I have tried multiple variations of models to find optmized network architecture. Some of them are below and checkpoint files are provided for research purpose. 
@@ -99,7 +113,7 @@ $ bash download.sh
 You can test the inference feature with a single image.
 
 ```
-$ python3 run.py --model=mobilenet_thin --resize=432x368 --image=../images/p1.jpg
+$ python3 tf_pose/run.py --model=mobilenet_thin --resize=432x368 --image=./images/p1.jpg
 ```
 
 The image flag MUST be relative to the src folder with no "~", i.e:
@@ -114,7 +128,7 @@ Then you will see the screen as below with pafmap, heatmap, result and etc.
 ### Realtime Webcam
 
 ```
-$ python3 run_webcam.py --model=mobilenet_thin --resolution=432x368 --camera=0
+$ python tf_pose/run_webcam.py --model=mobilenet_thin --resolution=432x368 --camera=0
 ```
 
 Then you will see the realtime webcam screen with estimated poses as below. This [Realtime Result](./etcs/openpose_macbook13_mobilenet2.gif) was recored on macbook pro 13" with 3.1Ghz Dual-Core CPU.

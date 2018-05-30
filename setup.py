@@ -3,12 +3,16 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import subprocess
 import setuptools
 from distutils.core import setup, Extension
 
 import numpy as np
 
 _VERSION = '0.1'
+
+cwd = os.path.dirname(os.path.abspath(__file__))
+subprocess.check_output(["bash", "models/graph/cmu/download.sh"], cwd=cwd)
 
 POSE_DIR = os.path.realpath(os.path.dirname(__file__))
 
@@ -52,7 +56,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     ext_modules=[EXT],
     data_files=[('models/graph/cmu', ['models/graph/cmu/graph_opt.pb']),
-                ('models/graph/mobilenet_thin', ['models/graph/mobilenet_thin/graph_opt.pb']),],
+                ('models/graph/mobilenet_thin', ['models/graph/mobilenet_thin/graph_opt.pb']), ],
     py_modules=[
         "pafprocess"
     ],
