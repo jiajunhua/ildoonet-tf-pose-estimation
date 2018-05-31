@@ -32,7 +32,7 @@ def infer(image, model='cmu', resize='0x0', resize_out_ratio=4.0):
         raise Exception('Image can not be read, path=%s' % image)
     humans = e.inference(image, resize_to_default=(w > 0 and h > 0), upsample_size=resize_out_ratio)
 
-    if 'iTerm' in os.environ["TERM_PROGRAM"]:
+    if "TERM_PROGRAM" in os.environ and 'iTerm' in os.environ["TERM_PROGRAM"]:
         image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
         image_str = cv2.imencode(".jpg", image)[1].tostring()
         print("\033]1337;File=name=;inline=1:" + base64.b64encode(image_str).decode("utf-8") + "\a")
