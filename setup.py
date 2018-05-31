@@ -17,6 +17,7 @@ subprocess.check_output(["bash", "models/graph/cmu/download.sh"], cwd=cwd)
 POSE_DIR = os.path.realpath(os.path.dirname(__file__))
 
 REQUIRED_PACKAGES = [
+    'argparse>=1.1',
     'dill==0.2.7.1',
     'fire >= 0.1.3',
     'matplotlib >= 2.2.2',
