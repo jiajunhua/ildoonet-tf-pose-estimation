@@ -9,7 +9,7 @@ from distutils.core import setup, Extension
 
 import numpy as np
 
-_VERSION = '0.1'
+_VERSION = '0.1.0'
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 subprocess.check_output(["bash", "models/graph/cmu/download.sh"], cwd=cwd)
