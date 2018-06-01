@@ -12,8 +12,8 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from tfpose_ros.msg import Persons, Person, BodyPartElm
 
-from estimator import TfPoseEstimator
-from networks import model_wh, get_graph_path
+from tf_pose.estimator import TfPoseEstimator
+from tf_pose.networks import model_wh, get_graph_path
 
 
 def humans_to_msg(humans):
