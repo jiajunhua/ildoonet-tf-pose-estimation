@@ -11,6 +11,9 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
+# setup.py is called during catkin build
+catkin_python_setup()
+
 # Generate messages in the 'msg' folder
 add_message_files(
   FILES

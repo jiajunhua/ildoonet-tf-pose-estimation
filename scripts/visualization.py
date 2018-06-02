@@ -6,7 +6,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
 from tfpose_ros.msg import Persons, Person, BodyPartElm
-from estimator import Human, BodyPart, TfPoseEstimator
+from tf_pose.estimator import Human, BodyPart, TfPoseEstimator
 
 
 class VideoFrames:
