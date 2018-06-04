@@ -11,6 +11,16 @@ from tf_pose.networks import get_graph_path, model_wh
 Estimator = TfPoseEstimator
 
 
+def get_estimator(model='cmu', resize='0x0', resize_out_ratio=4.0):
+    w, h = model_wh(resize)
+    if w == 0 or h == 0:
+        e = TfPoseEstimator(get_graph_path(model), target_size=(432, 368))
+    else:
+        e = TfPoseEstimator(get_graph_path(model), target_size=(w, h))
+
+    return e
+
+
 def infer(image, model='cmu', resize='0x0', resize_out_ratio=4.0):
     """
 
