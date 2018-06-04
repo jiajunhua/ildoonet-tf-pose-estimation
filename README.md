@@ -39,13 +39,23 @@ You need dependencies below.
 
 ### Install
 
+Clone the repo and install 3rd-party libraries.
+
 ```bash
 $ git clone https://www.github.com/ildoonet/tf-openpose
 $ cd tf-openpose
 $ pip3 install -r requirements.txt
 ```
 
-### Alternative Package Install
+Build c++ library for post processing. See : https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess
+```
+$ cd tf_pose/pafprocess
+$ swig -python -c++ pafprocess.i && python3 setup.py build_ext --inplace
+```
+
+### Package Install
+
+Alternatively, you can install this repo as a shared package using pip.
 
 ```bash
 $ git clone https://www.github.com/ildoonet/tf-openpose

@@ -2,7 +2,6 @@ import logging
 
 import slidingwindow as sw
 
-from tf_pose.pafprocess import pafprocess
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -11,6 +10,13 @@ import time
 from tf_pose import common
 from tf_pose.common import CocoPart
 from tf_pose.tensblur.smoother import Smoother
+
+try:
+    from tf_pose.pafprocess import pafprocess
+except ModuleNotFoundError as e:
+    print(e)
+    print('you need to build c++ library for pafprocess. See : https://github.com/ildoonet/tf-pose-estimation/tree/master/tf_pose/pafprocess')
+    exit(-1)
 
 logger = logging.getLogger('TfPoseEstimator')
 logger.setLevel(logging.INFO)
