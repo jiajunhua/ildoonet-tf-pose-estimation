@@ -124,7 +124,7 @@ $ bash download.sh
 You can test the inference feature with a single image.
 
 ```
-$ python3 tf_pose/run.py --model=mobilenet_thin --resize=432x368 --image=./images/p1.jpg
+$ python run.py --model=mobilenet_thin --resize=432x368 --image=./images/p1.jpg
 ```
 
 The image flag MUST be relative to the src folder with no "~", i.e:
@@ -139,7 +139,7 @@ Then you will see the screen as below with pafmap, heatmap, result and etc.
 ### Realtime Webcam
 
 ```
-$ python tf_pose/run_webcam.py --model=mobilenet_thin --resize=432x368 --camera=0
+$ python run_webcam.py --model=mobilenet_thin --resize=432x368 --camera=0
 ```
 
 Then you will see the realtime webcam screen with estimated poses as below. This [Realtime Result](./etcs/openpose_macbook13_mobilenet2.gif) was recored on macbook pro 13" with 3.1Ghz Dual-Core CPU.
