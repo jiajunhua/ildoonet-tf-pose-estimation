@@ -89,12 +89,12 @@ class Human:
         :return:
         """
         # SEE : https://github.com/ildoonet/tf-pose-estimation/blob/master/tf_pose/common.py#L13
-        _NOSE = CocoPart.Nose
-        _NECK = CocoPart.Neck
-        _REye = CocoPart.REye
-        _LEye = CocoPart.LEye
-        _REar = CocoPart.REar
-        _LEar = CocoPart.LEar
+        _NOSE = CocoPart.Nose.value
+        _NECK = CocoPart.Neck.value
+        _REye = CocoPart.REye.value
+        _LEye = CocoPart.LEye.value
+        _REar = CocoPart.REar.value
+        _LEar = CocoPart.LEar.value
 
         _THRESHOLD_PART_CONFIDENCE = 0.2
         parts = [part for idx, part in self.body_parts.items() if part.score > _THRESHOLD_PART_CONFIDENCE]
@@ -171,10 +171,10 @@ class Human:
         if not (img_w > 0 and img_h > 0):
             raise Exception("img size should be positive")
 
-        _NOSE = CocoPart.Nose
-        _NECK = CocoPart.Neck
-        _RSHOULDER = CocoPart.RShoulder
-        _LSHOULDER = CocoPart.LShoulder
+        _NOSE = CocoPart.Nose.value
+        _NECK = CocoPart.Neck.value
+        _RSHOULDER = CocoPart.RShoulder.value
+        _LSHOULDER = CocoPart.LShoulder.value
         _THRESHOLD_PART_CONFIDENCE = 0.3
         parts = [part for idx, part in self.body_parts.items() if part.score > _THRESHOLD_PART_CONFIDENCE]
         part_coords = [(img_w * part.x, img_h * part.y) for part in parts if
