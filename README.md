@@ -1,9 +1,9 @@
 # tf-pose-estimation
 
-'Openpose' for human pose estimation have been implemented using Tensorflow. It also provides several variants that have made some changes to the network structure for **real-time processing on the CPU or low-power embedded devices.**
+'Openpose' for human pose estimation have been implemented using Tensorflow. It also provides several variants that have some changes to the network structure for **real-time processing on the CPU or low-power embedded devices.**
 
 
-**You can even run this on your macbook with descent FPS!**
+**You can even run this on your macbook with a descent FPS!**
 
 Original Repo(Caffe) : https://github.com/CMU-Perceptual-Computing-Lab/openpose
 
@@ -17,8 +17,8 @@ Implemented features are listed here : [features](./etcs/feature.md)
 
 ## Important Updates
 
-2018.5.21 Post-processing part is implemented in c++. It is required compiling the part. See: https://github.com/ildoonet/tf-pose-estimation/tree/master/src/pafprocess
-2018.2.7 Arguments in run.py script changed. Support dynamic input size.
+- 2018.5.21 Post-processing part is implemented in c++. It is required compiling the part. See: https://github.com/ildoonet/tf-pose-estimation/tree/master/src/pafprocess
+- 2018.2.7 Arguments in run.py script changed. Support dynamic input size.
 
 ## Install
 
@@ -29,10 +29,6 @@ You need dependencies below.
 - python3
 - tensorflow 1.4.1+
 - opencv3, protobuf, python3-tk
-
-### Opensources
-
-- slim
 - slidingwindow
   - https://github.com/adamrehn/slidingwindow
   - I copied from the above git repo to modify few things.
@@ -62,13 +58,6 @@ $ git clone https://www.github.com/ildoonet/tf-openpose
 $ cd tf-openpose
 $ python setup.py install
 ```
-
-#### Test installed package
-![package_install_result](./etcs/imgcat0.gif)
-```bash
-python -c 'import tf_pose; tf_pose.infer(image="./images/p1.jpg")'
-```
-
 
 ## Models
 
@@ -166,36 +155,4 @@ See : [etcs/training.md](./etcs/training.md)
 
 ## References
 
-### OpenPose
-
-[1] https://github.com/CMU-Perceptual-Computing-Lab/openpose
-
-[2] Training Codes : https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation
-
-[3] Custom Caffe by Openpose : https://github.com/CMU-Perceptual-Computing-Lab/caffe_train
-
-[4] Keras Openpose : https://github.com/michalfaber/keras_Realtime_Multi-Person_Pose_Estimation
-
-[5] Keras Openpose2 : https://github.com/kevinlin311tw/keras-openpose-reproduce
-
-### Lifting from the deep
-
-[1] Arxiv Paper : https://arxiv.org/abs/1701.00295
-
-[2] https://github.com/DenisTome/Lifting-from-the-Deep-release
-
-### Mobilenet
-
-[1] Original Paper : https://arxiv.org/abs/1704.04861
-
-[2] Pretrained model : https://github.com/tensorflow/models/blob/master/slim/nets/mobilenet_v1.md
-
-### Libraries
-
-[1] Tensorpack : https://github.com/ppwwyyxx/tensorpack
-
-### Tensorflow Tips
-
-[1] Freeze graph : https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py
-
-[2] Optimize graph : https://codelabs.developers.google.com/codelabs/tensorflow-for-poets-2
+See : [etcs/reference.md](./etcs/reference.md)
