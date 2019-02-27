@@ -18,6 +18,7 @@ from common import get_sample_images
 from networks import get_network
 
 logger = logging.getLogger('train')
+logger.handlers.clear()
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
@@ -28,22 +29,22 @@ logger.addHandler(ch)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training codes for Openpose using Tensorflow')
-    parser.add_argument('--model', default='personlab_resnet101', help='model name')
+    parser.add_argument('--model', default='mobilenet_v2_1.4', help='model name')
     parser.add_argument('--datapath', type=str, default='/data/public/rw/coco/annotations')
     parser.add_argument('--imgpath', type=str, default='/data/public/rw/coco/')
     parser.add_argument('--batchsize', type=int, default=96)
     parser.add_argument('--gpus', type=int, default=1)
-    parser.add_argument('--max-epoch', type=int, default=30)
+    parser.add_argument('--max-epoch', type=int, default=300)
     parser.add_argument('--lr', type=str, default='0.01')
-    parser.add_argument('--modelpath', type=str, default='/data/private/tf-openpose-models-2018-2/')
-    parser.add_argument('--logpath', type=str, default='/data/private/tf-openpose-log-2018-2/')
+    parser.add_argument('--tag', type=str, default='test')
     parser.add_argument('--checkpoint', type=str, default='')
-    parser.add_argument('--tag', type=str, default='')
     parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
 
-    parser.add_argument('--input-width', type=int, default=368)
+    parser.add_argument('--input-width', type=int, default=432)
     parser.add_argument('--input-height', type=int, default=368)
     args = parser.parse_args()
+
+    modelpath = logpath = './models/train/'
 
     if args.gpus <= 0:
         raise Exception('gpus <= 0')
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     set_network_input_wh(args.input_width, args.input_height)
     scale = 4
 
-    if args.model in ['cmu', 'vgg', 'mobilenet_thin', 'mobilenet_try', 'mobilenet_try2', 'mobilenet_try3', 'hybridnet_try']:
+    if args.model in ['cmu', 'vgg'] or 'mobilenet' in args.model:
         scale = 8
 
     set_network_scale(scale)
@@ -112,20 +113,21 @@ if __name__ == '__main__':
 
     outputs = tf.concat(outputs, axis=0)
 
-    with tf.device(tf.DeviceSpec(device_type="CPU")):
+    with tf.device(tf.DeviceSpec(device_type="GPU")):
         # define loss
         total_loss = tf.reduce_sum(losses) / args.batchsize
         total_loss_ll_paf = tf.reduce_sum(last_losses_l1) / args.batchsize
         total_loss_ll_heat = tf.reduce_sum(last_losses_l2) / args.batchsize
-        total_loss_ll = tf.reduce_mean([total_loss_ll_paf, total_loss_ll_heat])
+        total_loss_ll = tf.reduce_sum([total_loss_ll_paf, total_loss_ll_heat])
 
         # define optimizer
         step_per_epoch = 121745 // args.batchsize
         global_step = tf.Variable(0, trainable=False)
         if ',' not in args.lr:
             starter_learning_rate = float(args.lr)
-            learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
-                                                       decay_steps=10000, decay_rate=0.33, staircase=True)
+            # learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
+            #                                            decay_steps=10000, decay_rate=0.33, staircase=True)
+            learning_rate = tf.train.cosine_decay(starter_learning_rate, global_step, args.max_epoch * step_per_epoch, alpha=0.0)
         else:
             lrs = [float(x) for x in args.lr.split(',')]
             boundaries = [step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0]
@@ -133,6 +135,7 @@ if __name__ == '__main__':
 
     # optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     optimizer = tf.train.AdamOptimizer(learning_rate, epsilon=1e-8)
+    # optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=0.8, use_locking=True, use_nesterov=True)
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
         train_op = optimizer.minimize(total_loss, global_step, colocate_gradients_with_ops=True)
@@ -144,6 +147,7 @@ if __name__ == '__main__':
     tf.summary.scalar("loss_lastlayer_paf", total_loss_ll_paf)
     tf.summary.scalar("loss_lastlayer_heat", total_loss_ll_heat)
     tf.summary.scalar("queue_size", enqueuer.size())
+    tf.summary.scalar("lr", learning_rate)
     merged_summary_op = tf.summary.merge_all()
 
     valid_loss = tf.placeholder(tf.float32, shape=[])
@@ -160,15 +164,8 @@ if __name__ == '__main__':
 
     saver = tf.train.Saver(max_to_keep=100)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+    config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
-        training_name = '{}_batch:{}_lr:{}_gpus:{}_{}x{}_{}'.format(
-            args.model,
-            args.batchsize,
-            args.lr,
-            args.gpus,
-            args.input_width, args.input_height,
-            args.tag
-        )
         logger.info('model weights initialization')
         sess.run(tf.global_variables_initializer())
 
@@ -188,7 +185,7 @@ if __name__ == '__main__':
             logger.info('Restore pretrained weights...Done')
 
         logger.info('prepare file writer')
-        file_writer = tf.summary.FileWriter(args.logpath + training_name, sess.graph)
+        file_writer = tf.summary.FileWriter(os.path.join(logpath, args.tag), sess.graph)
 
         logger.info('prepare coordinator')
         coord = tf.train.Coordinator()
@@ -200,13 +197,15 @@ if __name__ == '__main__':
         last_gs_num = last_gs_num2 = 0
         initial_gs_num = sess.run(global_step)
 
+        last_log_epoch1 = last_log_epoch2 = -1
         while True:
             _, gs_num = sess.run([train_op, global_step])
+            curr_epoch = float(gs_num) / step_per_epoch
 
             if gs_num > step_per_epoch * args.max_epoch:
                 break
 
-            if gs_num - last_gs_num >= 100:
+            if gs_num - last_gs_num >= 500:
                 train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, lr_val, summary, queue_size = sess.run([total_loss, total_loss_ll, total_loss_ll_paf, total_loss_ll_heat, learning_rate, merged_summary_op, enqueuer.size()])
 
                 # log of training loss / accuracy
@@ -214,11 +213,13 @@ if __name__ == '__main__':
                 logger.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g, loss_ll_paf=%g, loss_ll_heat=%g, q=%d' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, queue_size))
                 last_gs_num = gs_num
 
-                file_writer.add_summary(summary, gs_num)
+                if last_log_epoch1 < curr_epoch:
+                    file_writer.add_summary(summary, curr_epoch)
+                    last_log_epoch1 = curr_epoch
 
-            if gs_num - last_gs_num2 >= 1000:
+            if gs_num - last_gs_num2 >= 2000:
                 # save weights
-                saver.save(sess, os.path.join(args.modelpath, training_name, 'model'), global_step=global_step)
+                saver.save(sess, os.path.join(modelpath, args.tag, 'model_latest'), global_step=global_step)
 
                 average_loss = average_loss_ll = average_loss_ll_paf = average_loss_ll_heat = 0
                 total_cnt = 0
@@ -242,13 +243,13 @@ if __name__ == '__main__':
                     average_loss_ll_heat += lss_ll_heat * len(images_test)
                     total_cnt += len(images_test)
 
-                logger.info('validation(%d) %s loss=%f, loss_ll=%f, loss_ll_paf=%f, loss_ll_heat=%f' % (total_cnt, training_name, average_loss / total_cnt, average_loss_ll / total_cnt, average_loss_ll_paf / total_cnt, average_loss_ll_heat / total_cnt))
+                logger.info('validation(%d) %s loss=%f, loss_ll=%f, loss_ll_paf=%f, loss_ll_heat=%f' % (total_cnt, args.tag, average_loss / total_cnt, average_loss_ll / total_cnt, average_loss_ll_paf / total_cnt, average_loss_ll_heat / total_cnt))
                 last_gs_num2 = gs_num
 
                 sample_image = [enqueuer.last_dp[0][i] for i in range(4)]
                 outputMat = sess.run(
                     outputs,
-                    feed_dict={q_inp: np.array((sample_image + val_image)*(args.batchsize // 16))}
+                    feed_dict={q_inp: np.array((sample_image + val_image) * (args.batchsize // 16))}
                 )
                 pafMat, heatMat = outputMat[:, :, :, 19:], outputMat[:, :, :, :19]
 
@@ -275,7 +276,9 @@ if __name__ == '__main__':
                     sample_valid: test_results,
                     sample_train: sample_results
                 })
-                file_writer.add_summary(summary, gs_num)
+                if last_log_epoch2 < curr_epoch:
+                    file_writer.add_summary(summary, curr_epoch)
+                    last_log_epoch2 = curr_epoch
 
-        saver.save(sess, os.path.join(args.modelpath, training_name, 'model'), global_step=global_step)
+        saver.save(sess, os.path.join(modelpath, args.tag, 'model_latest'), global_step=global_step)
     logger.info('optimization finished. %f' % (time.time() - time_started))

@@ -13,9 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """Implementation of Mobilenet V2.
-
 Architecture: https://arxiv.org/abs/1801.04381
-
 The base model gives 72.2% accuracy on ImageNet, with 300MMadds,
 3.4 M parameters.
 """
@@ -25,11 +23,12 @@ from __future__ import division
 from __future__ import print_function
 
 import copy
+import functools
 
 import tensorflow as tf
 
-from nets.mobilenet import conv_blocks as ops
-from nets.mobilenet import mobilenet as lib
+from tf_pose.mobilenet import conv_blocks as ops
+from tf_pose.mobilenet import mobilenet as lib
 
 slim = tf.contrib.slim
 op = lib.op
@@ -90,15 +89,13 @@ def mobilenet(input_tensor,
               finegrain_classification_mode=False,
               min_depth=None,
               divisible_by=None,
+              activation_fn=None,
               **kwargs):
   """Creates mobilenet V2 network.
-
   Inference mode is created by default. To create training use training_scope
   below.
-
   with tf.contrib.slim.arg_scope(mobilenet_v2.training_scope()):
      logits, endpoints = mobilenet_v2.mobilenet(input_tensor)
-
   Args:
     input_tensor: The input tensor
     num_classes: number of classes
@@ -116,13 +113,14 @@ def mobilenet(input_tensor,
     many channels after application of depth multiplier.
     divisible_by: If provided will ensure that all layers # channels
     will be divisible by this number.
+    activation_fn: Activation function to use, defaults to tf.nn.relu6 if not
+      specified.
     **kwargs: passed directly to mobilenet.mobilenet:
       prediction_fn- what prediction function to use.
       reuse-: whether to reuse variables (if reuse set to true, scope
       must be given).
   Returns:
     logits/endpoints pair
-
   Raises:
     ValueError: On invalid arguments
   """
@@ -135,6 +133,12 @@ def mobilenet(input_tensor,
     conv_defs = copy.deepcopy(conv_defs)
     if depth_multiplier < 1:
       conv_defs['spec'][-1].params['num_outputs'] /= depth_multiplier
+  if activation_fn:
+    conv_defs = copy.deepcopy(conv_defs)
+    defaults = conv_defs['defaults']
+    conv_defaults = (
+        defaults[(slim.conv2d, slim.fully_connected, slim.separable_conv2d)])
+    conv_defaults['activation_fn'] = activation_fn
 
   depth_args = {}
   # NB: do not set depth_args unless they are provided to avoid overriding
@@ -153,6 +157,24 @@ def mobilenet(input_tensor,
         multiplier=depth_multiplier,
         **kwargs)
 
+mobilenet.default_image_size = 224
+
+
+def wrapped_partial(func, *args, **kwargs):
+  partial_func = functools.partial(func, *args, **kwargs)
+  functools.update_wrapper(partial_func, func)
+  return partial_func
+
+
+# Wrappers for mobilenet v2 with depth-multipliers. Be noticed that
+# 'finegrain_classification_mode' is set to True, which means the embedding
+# layer will not be shrinked when given a depth-multiplier < 1.0.
+mobilenet_v2_140 = wrapped_partial(mobilenet, depth_multiplier=1.4)
+mobilenet_v2_050 = wrapped_partial(mobilenet, depth_multiplier=0.50,
+                                   finegrain_classification_mode=True)
+mobilenet_v2_035 = wrapped_partial(mobilenet, depth_multiplier=0.35,
+                                   finegrain_classification_mode=True)
+
 
 @slim.add_arg_scope
 def mobilenet_base(input_tensor, depth_multiplier=1.0, **kwargs):
@@ -164,13 +186,10 @@ def mobilenet_base(input_tensor, depth_multiplier=1.0, **kwargs):
 
 def training_scope(**kwargs):
   """Defines MobilenetV2 training scope.
-
   Usage:
      with tf.contrib.slim.arg_scope(mobilenet_v2.training_scope()):
        logits, endpoints = mobilenet_v2.mobilenet(input_tensor)
-
   with slim.
-
   Args:
     **kwargs: Passed to mobilenet.training_scope. The following parameters
     are supported:
@@ -178,7 +197,6 @@ def training_scope(**kwargs):
       stddev-  Standard deviation for initialization, if negative uses xavier.
       dropout_keep_prob- dropout keep probability
       bn_decay- decay for the batch norm moving averages.
-
   Returns:
     An `arg_scope` to use for the mobilenet v2 model.
   """

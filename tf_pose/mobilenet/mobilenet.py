@@ -35,16 +35,13 @@ def apply_activation(x, name=None, activation_fn=None):
 
 def _fixed_padding(inputs, kernel_size, rate=1):
   """Pads the input along the spatial dimensions independently of input size.
-
   Pads the input such that if it was used in a convolution with 'VALID' padding,
   the output would have the same dimensions as if the unpadded input was used
   in a convolution with 'SAME' padding.
-
   Args:
     inputs: A tensor of size [batch, height_in, width_in, channels].
     kernel_size: The kernel to be used in the conv2d or max_pool2d operation.
     rate: An integer, rate for atrous convolution.
-
   Returns:
     output: A tensor of size [batch, height_out, width_out, channels] with the
       input, either intact (if kernel_size == 1) or padded (if kernel_size > 1).
@@ -72,11 +69,9 @@ def _make_divisible(v, divisor, min_value=None):
 @contextlib.contextmanager
 def _set_arg_scope_defaults(defaults):
   """Sets arg scope defaults for all items present in defaults.
-
   Args:
     defaults: dictionary/list of pairs, containing a mapping from
     function to a dictionary of default args.
-
   Yields:
     context manager where all defaults are set.
   """
@@ -126,14 +121,11 @@ class NoOpScope(object):
 
 def safe_arg_scope(funcs, **kwargs):
   """Returns `slim.arg_scope` with all None arguments removed.
-
   Arguments:
     funcs: Functions to pass to `arg_scope`.
     **kwargs: Arguments to pass to `arg_scope`.
-
   Returns:
     arg_scope or No-op context manager.
-
   Note: can be useful if None value should be interpreted as "do not overwrite
     this parameter value".
   """
@@ -156,14 +148,11 @@ def mobilenet_base(  # pylint: disable=invalid-name
     scope=None,
     is_training=False):
   """Mobilenet base network.
-
   Constructs a network from inputs to the given final endpoint. By default
   the network is constructed in inference mode. To create network
   in training mode use:
-
   with slim.arg_scope(mobilenet.training_scope()):
      logits, endpoints = mobilenet_base(...)
-
   Args:
     inputs: a tensor of shape [batch_size, height, width, channels].
     conv_defs: A list of op(...) layers specifying the net architecture.
@@ -179,11 +168,9 @@ def mobilenet_base(  # pylint: disable=invalid-name
       of the activation maps. Allowed values are 1 or any even number, excluding
       zero. Typical values are 8 (accurate fully convolutional mode), 16
       (fast fully convolutional mode), and 32 (classification mode).
-
       NOTE- output_stride relies on all consequent operators to support dilated
       operators via "rate" parameter. This might require wrapping non-conv
       operators to operate properly.
-
     use_explicit_padding: Use 'VALID' padding for convolutions, but prepad
       inputs so that the output dimensions are the same as if 'SAME' padding
       were used.
@@ -196,12 +183,10 @@ def mobilenet_base(  # pylint: disable=invalid-name
       it to False, even if there is outer training_scope set to to training.
       (The network will be built in inference mode). If this is set to None,
       no arg_scope is added for slim.batch_norm's is_training parameter.
-
   Returns:
     tensor_out: output tensor.
     end_points: a set of activations for external use, for example summaries or
                 losses.
-
   Raises:
     ValueError: depth_multiplier <= 0, or the target output_stride is not
                 allowed.
@@ -310,11 +295,8 @@ def mobilenet(inputs,
               base_only=False,
               **mobilenet_args):
   """Mobilenet model for classification, supports both V1 and V2.
-
   Note: default mode is inference, use mobilenet.training_scope to create
   training network.
-
-
   Args:
     inputs: a tensor of shape [batch_size, height, width, channels].
     num_classes: number of predicted classes. If 0 or None, the logits layer
@@ -338,13 +320,11 @@ def mobilenet(inputs,
       (e.g. output_stride=16, but the architecture has 5 stride=2 operators),
       it will replace output_stride with fractional convolutions using Atrous
       Convolutions.
-
   Returns:
     logits: the pre-softmax activations, a tensor of size
       [batch_size, num_classes]
     end_points: a dictionary from components of the network to the corresponding
       activation tensor.
-
   Raises:
     ValueError: Input rank is invalid.
   """
@@ -388,10 +368,8 @@ def mobilenet(inputs,
 
 def global_pool(input_tensor, pool_op=tf.nn.avg_pool):
   """Applies avg pool to produce 1x1 output.
-
   NOTE: This function is funcitonally equivalenet to reduce_mean, but it has
   baked in average pool which has better support across hardware.
-
   Args:
     input_tensor: input tensor
     pool_op: pooling op (avg pool is default)
@@ -418,11 +396,9 @@ def training_scope(is_training=True,
                    dropout_keep_prob=0.8,
                    bn_decay=0.997):
   """Defines Mobilenet training scope.
-
   Usage:
      with tf.contrib.slim.arg_scope(mobilenet.training_scope()):
        logits, endpoints = mobilenet_v2.mobilenet(input_tensor)
-
      # the network created will be trainble with dropout/batch norm
      # initialized appropriately.
   Args:
@@ -431,13 +407,11 @@ def training_scope(is_training=True,
       across both training/evaluation, but most of the time training_scope with
       value False is not needed. If this is set to None, the parameters is not
       added to the batch_norm arg_scope.
-
     weight_decay: The weight decay to use for regularizing the model.
     stddev: Standard deviation for initialization, if negative uses xavier.
     dropout_keep_prob: dropout keep probability (not set if equals to None).
     bn_decay: decay for the batch norm moving averages (not set if equals to
       None).
-
   Returns:
     An argument scope to use via arg_scope.
   """

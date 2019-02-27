@@ -23,16 +23,13 @@ slim = tf.contrib.slim
 
 def _fixed_padding(inputs, kernel_size, rate=1):
   """Pads the input along the spatial dimensions independently of input size.
-
   Pads the input such that if it was used in a convolution with 'VALID' padding,
   the output would have the same dimensions as if the unpadded input was used
   in a convolution with 'SAME' padding.
-
   Args:
     inputs: A tensor of size [batch, height_in, width_in, channels].
     kernel_size: The kernel to be used in the conv2d or max_pool2d operation.
     rate: An integer, rate for atrous convolution.
-
   Returns:
     output: A tensor of size [batch, height_out, width_out, channels] with the
       input, either intact (if kernel_size == 1) or padded (if kernel_size > 1).
@@ -98,14 +95,12 @@ def split_separable_conv2d(input_tensor,
                            endpoints=None,
                            use_explicit_padding=False):
   """Separable mobilenet V1 style convolution.
-
   Depthwise convolution, with default non-linearity,
   followed by 1x1 depthwise convolution.  This is similar to
   slim.separable_conv2d, but differs in tha it applies batch
   normalization and non-linearity to depthwise. This  matches
   the basic building of Mobilenet Paper
   (https://arxiv.org/abs/1704.04861)
-
   Args:
     input_tensor: input
     num_outputs: number of outputs
@@ -118,7 +113,6 @@ def split_separable_conv2d(input_tensor,
     use_explicit_padding: Use 'VALID' padding for convolutions, but prepad
       inputs so that the output dimensions are the same as if 'SAME' padding
       were used.
-
   Returns:
     output tesnor
   """
@@ -168,6 +162,7 @@ def expanded_conv(input_tensor,
                   kernel_size=(3, 3),
                   residual=True,
                   normalizer_fn=None,
+                  project_activation_fn=tf.identity,
                   split_projection=1,
                   split_expansion=1,
                   expansion_transform=None,
@@ -178,10 +173,8 @@ def expanded_conv(input_tensor,
                   padding='SAME',
                   scope=None):
   """Depthwise Convolution Block with expansion.
-
   Builds a composite convolution that has the following structure
   expansion (1x1) -> depthwise (kernel_size) -> projection (1x1)
-
   Args:
     input_tensor: input
     num_outputs: number of outputs in the final layer.
@@ -195,6 +188,7 @@ def expanded_conv(input_tensor,
     residual: whether to include residual connection between input
       and output.
     normalizer_fn: batchnorm or otherwise
+    project_activation_fn: activation function for the project layer
     split_projection: how many ways to split projection operator
       (that is conv expansion->bottleneck)
     split_expansion: how many ways to split expansion op
@@ -217,10 +211,8 @@ def expanded_conv(input_tensor,
       were used.
     padding: Padding type to use if `use_explicit_padding` is not set.
     scope: optional scope.
-
   Returns:
     Tensor of depth num_outputs
-
   Raises:
     TypeError: on inval
   """
@@ -291,7 +283,7 @@ def expanded_conv(input_tensor,
         stride=1,
         scope='project',
         normalizer_fn=normalizer_fn,
-        activation_fn=tf.identity)
+        activation_fn=project_activation_fn)
     if endpoints is not None:
       endpoints['projection_output'] = net
     if depthwise_location == 'output':
@@ -319,11 +311,9 @@ def split_conv(input_tensor,
                divisible_by=8,
                **kwargs):
   """Creates a split convolution.
-
   Split convolution splits the input and output into
   'num_blocks' blocks of approximately the same size each,
   and only connects $i$-th input to $i$ output.
-
   Args:
     input_tensor: input tensor
     num_outputs: number of output filters

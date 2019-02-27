@@ -20,11 +20,13 @@ except ModuleNotFoundError as e:
     exit(-1)
 
 logger = logging.getLogger('TfPoseEstimator')
+logger.handlers.clear()
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
+logger.setLevel(logging.INFO)
 
 
 def _round(v):
@@ -368,6 +370,10 @@ class TfPoseEstimator:
     def __del__(self):
         # self.persistent_sess.close()
         pass
+
+    def get_flops(self):
+        flops = tf.profiler.profile(self.graph, options=tf.profiler.ProfileOptionBuilder.float_operation())
+        return flops.total_float_ops
 
     @staticmethod
     def _quantize_img(npimg):

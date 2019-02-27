@@ -133,3 +133,9 @@ def get_sample_images(w, h):
         read_imgfile('./images/p3_dance.png', w, h),
     ]
     return val_image
+
+
+def to_str(s):
+    if not isinstance(s, str):
+        return s.decode('utf-8')
+    return s
