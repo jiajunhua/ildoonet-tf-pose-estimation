@@ -30,6 +30,7 @@ from tensorpack.dataflow.base import RNGDataFlow, DataFlowTerminated
 from pycocotools.coco import COCO
 from pose_augment import pose_flip, pose_rotation, pose_to_img, pose_crop_random, \
     pose_resize_shortestedge_random, pose_resize_shortestedge_fixed, pose_crop_center, pose_random_scale
+from numba import jit
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 logger = logging.getLogger('pose_dataset')
@@ -103,6 +104,7 @@ class CocoMetadata:
 
         # logger.debug('joint size=%d' % len(self.joint_list))
 
+    @jit
     def get_heatmap(self, target_size):
         heatmap = np.zeros((CocoMetadata.__coco_parts, self.height, self.width), dtype=np.float32)
 
@@ -123,6 +125,7 @@ class CocoMetadata:
         return heatmap.astype(np.float16)
 
     @staticmethod
+    @jit(nopython=True)
     def put_heatmap(heatmap, plane_idx, center, sigma):
         center_x, center_y = center
         _, height, width = heatmap.shape[:3]
@@ -145,6 +148,7 @@ class CocoMetadata:
                 heatmap[plane_idx][y][x] = max(heatmap[plane_idx][y][x], math.exp(-exp))
                 heatmap[plane_idx][y][x] = min(heatmap[plane_idx][y][x], 1.0)
 
+    @jit
     def get_vectormap(self, target_size):
         vectormap = np.zeros((CocoMetadata.__coco_parts*2, self.height, self.width), dtype=np.float32)
         countmap = np.zeros((CocoMetadata.__coco_parts, self.height, self.width), dtype=np.int16)
@@ -175,6 +179,7 @@ class CocoMetadata:
         return vectormap.astype(np.float16)
 
     @staticmethod
+    @jit(nopython=True)
     def put_vectormap(vectormap, countmap, plane_idx, center_from, center_to, threshold=8):
         _, height, width = vectormap.shape[:3]
 
@@ -364,7 +369,7 @@ def get_dataflow(path, is_train, img_path=None):
         #     ]), 0.7)
         # ]
         # ds = AugmentImageComponent(ds, augs)
-        ds = PrefetchData(ds, 1000, multiprocessing.cpu_count() * 4)
+        ds = PrefetchData(ds, 1000, multiprocessing.cpu_count() * 1)
     else:
         ds = MultiThreadMapData(ds, nr_thread=16, map_func=read_image_url, buffer_size=1000)
         ds = MapDataComponent(ds, pose_resize_shortestedge_fixed)

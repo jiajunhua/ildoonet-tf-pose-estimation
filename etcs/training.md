@@ -94,16 +94,16 @@ And the optimization can be performed on the frozen model via graph transform pr
 ```bash
 $ bazel build tensorflow/tools/graph_transforms:transform_graph
 $ bazel-bin/tensorflow/tools/graph_transforms/transform_graph \
-    --in_graph=... \
-    --out_graph=... \
+    --in_graph=./tmp/graph_frozen.pb \
+    --out_graph=./tmp/graph_opt.pb \
     --inputs='image:0' \
     --outputs='Openpose/concat_stage7:0' \
     --transforms='
     strip_unused_nodes(type=float, shape="1,368,368,3")
-    remove_nodes(op=Identity, op=CheckNumerics)
-    fold_constants(ignoreError=False)
     fold_old_batch_norms
-    fold_batch_norms'
+    fold_batch_norms
+    fold_constants(ignoreError=False)
+    remove_nodes(op=Identity, op=CheckNumerics)'
 ```
 
 Also, It is promising to quantize neural network in 8 bit to get futher improvement for speed. In my case, this will make inference less accurate and take more time on Intel's CPUs.
