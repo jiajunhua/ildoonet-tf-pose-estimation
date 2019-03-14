@@ -90,10 +90,10 @@ class BaseNetwork(object):
                         sys.exit(-1)
             else:
                 op_name = to_str(op_name)
-                if op_name > 'conv4':
-                    print(op_name, 'skipped')
-                    continue
-                print(op_name, 'restored')
+                # if op_name > 'conv4':
+                #     print(op_name, 'skipped')
+                #     continue
+                # print(op_name, 'restored')
                 with tf.variable_scope(op_name, reuse=True):
                     for param_name, data in param_dict.items():
                         try:

@@ -392,10 +392,10 @@ def get_dataflow_batch(path, is_train, batchsize, img_path=None):
     logger.info('dataflow img_path=%s' % img_path)
     ds = get_dataflow(path, is_train, img_path=img_path)
     ds = BatchData(ds, batchsize)
-    if is_train:
-        ds = PrefetchData(ds, 10, 2)
-    else:
-        ds = PrefetchData(ds, 50, 2)
+    # if is_train:
+    #     ds = PrefetchData(ds, 10, 2)
+    # else:
+    #     ds = PrefetchData(ds, 50, 2)
 
     return ds
 
