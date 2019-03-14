@@ -151,15 +151,14 @@ class BaseNetwork(object):
     @layer
     def normalize_vgg(self, input, name):
         # normalize input -0.5 ~ 0.5
-        input = tf.divide(input, 256.0, name=name + '_divide')
-        input = tf.subtract(input, 0.5, name=name + '_subtract')
+        input = tf.multiply(input, 1./ 256.0, name=name + '_divide')
+        input = tf.add(input, -0.5, name=name + '_subtract')
         return input
 
     @layer
     def normalize_mobilenet(self, input, name):
-        input = tf.divide(input, 255.0, name=name + '_divide')
-        input = tf.subtract(input, 0.5, name=name + '_subtract')
-        input = tf.multiply(input, 2.0, name=name + '_multiply')
+        input = tf.divide(input, 128.0, name=name + '_divide')
+        input = tf.subtract(input, 1.0, name=name + '_subtract')
         return input
 
     @layer

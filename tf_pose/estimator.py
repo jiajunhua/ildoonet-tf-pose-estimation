@@ -367,6 +367,10 @@ class TfPoseEstimator:
             }
         )
 
+        # logs
+        if self.tensor_image.dtype == tf.quint8:
+            logger.info('quantization mode enabled.')
+
     def __del__(self):
         # self.persistent_sess.close()
         pass

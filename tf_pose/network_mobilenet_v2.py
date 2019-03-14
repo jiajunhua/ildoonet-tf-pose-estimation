@@ -97,13 +97,14 @@ class Mobilenetv2Network(network_base.BaseNetwork):
     def loss_last(self):
         return self.get_output('MConv_Stage6_L1_5'), self.get_output('MConv_Stage6_L2_5')
 
-    def restorable_variables(self):
+    def restorable_variables(self, only_backbone=True):
         vs = {v.op.name: v for v in tf.global_variables() if
-              'MobilenetV2' in v.op.name and
+              ('MobilenetV2' in v.op.name or (only_backbone is False and 'Openpose' in v.op.name)) and
               # 'global_step' not in v.op.name and
               # 'beta1_power' not in v.op.name and 'beta2_power' not in v.op.name and
+              'quant' not in v.op.name and
               'RMSProp' not in v.op.name and 'Momentum' not in v.op.name and
               'Ada' not in v.op.name and 'Adam' not in v.op.name
               }
-        print(list(vs.keys()))
+        # print(set([v.op.name for v in tf.global_variables()]) - set(list(vs.keys())))
         return vs

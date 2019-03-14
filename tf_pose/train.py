@@ -10,7 +10,6 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
-from tensorpack.dataflow.remote import RemoteDataZMQ
 
 from pose_dataset import get_dataflow_batch, DataFlowToQueue, CocoPose
 from pose_augment import set_network_input_wh, set_network_scale
@@ -38,10 +37,10 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=str, default='0.01')
     parser.add_argument('--tag', type=str, default='test')
     parser.add_argument('--checkpoint', type=str, default='')
-    parser.add_argument('--remote-data', type=str, default='', help='eg. tcp://0.0.0.0:1027')
 
     parser.add_argument('--input-width', type=int, default=432)
     parser.add_argument('--input-height', type=int, default=368)
+    parser.add_argument('--quant-delay', type=int, default=-1)
     args = parser.parse_args()
 
     modelpath = logpath = './models/train/'
@@ -66,11 +65,7 @@ if __name__ == '__main__':
         heatmap_node = tf.placeholder(tf.float32, shape=(args.batchsize, output_h, output_w, 19), name='heatmap')
 
         # prepare data
-        if not args.remote_data:
-            df = get_dataflow_batch(args.datapath, True, args.batchsize, img_path=args.imgpath)
-        else:
-            # transfer inputs from ZMQ
-            df = RemoteDataZMQ(args.remote_data, hwm=3)
+        df = get_dataflow_batch(args.datapath, True, args.batchsize, img_path=args.imgpath)
         enqueuer = DataFlowToQueue(df, [input_node, heatmap_node, vectmap_node], queue_size=100)
         q_inp, q_heat, q_vect = enqueuer.dequeue()
 
@@ -79,10 +74,10 @@ if __name__ == '__main__':
     validation_cache = []
 
     val_image = get_sample_images(args.input_width, args.input_height)
-    logger.info('tensorboard val image: %d' % len(val_image))
-    logger.info(q_inp)
-    logger.info(q_heat)
-    logger.info(q_vect)
+    logger.debug('tensorboard val image: %d' % len(val_image))
+    logger.debug(q_inp)
+    logger.debug(q_heat)
+    logger.debug(q_vect)
 
     # define model for multi-gpu
     q_inp_split, q_heat_split, q_vect_split = tf.split(q_inp, args.gpus), tf.split(q_heat, args.gpus), tf.split(q_vect, args.gpus)
@@ -97,6 +92,8 @@ if __name__ == '__main__':
         with tf.device(tf.DeviceSpec(device_type="GPU", device_index=gpu_id)):
             with tf.variable_scope(tf.get_variable_scope(), reuse=(gpu_id > 0)):
                 net, pretrain_path, last_layer = get_network(args.model, q_inp_split[gpu_id])
+                if args.checkpoint:
+                    pretrain_path = args.checkpoint
                 vect, heat = net.loss_last()
                 output_vectmap.append(vect)
                 output_heatmap.append(heat)
@@ -133,6 +130,11 @@ if __name__ == '__main__':
             boundaries = [step_per_epoch * 5 * i for i, _ in range(len(lrs)) if i > 0]
             learning_rate = tf.train.piecewise_constant(global_step, boundaries, lrs)
 
+    if args.quant_delay >= 0:
+        logger.info('train using quantized mode, delay=%d' % args.quant_delay)
+        g = tf.get_default_graph()
+        tf.contrib.quantize.create_training_graph(input_graph=g, quant_delay=args.quant_delay)
+
     # optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.0005, momentum=0.9, epsilon=1e-10)
     optimizer = tf.train.AdamOptimizer(learning_rate, epsilon=1e-8)
     # optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=0.8, use_locking=True, use_nesterov=True)
@@ -162,26 +164,31 @@ if __name__ == '__main__':
     valid_loss_ll_t = tf.summary.scalar("loss_valid_lastlayer", valid_loss_ll)
     merged_validate_op = tf.summary.merge([train_img, valid_img, valid_loss_t, valid_loss_ll_t])
 
-    saver = tf.train.Saver(max_to_keep=100)
+    saver = tf.train.Saver(max_to_keep=1000)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
         logger.info('model weights initialization')
         sess.run(tf.global_variables_initializer())
 
-        if args.checkpoint:
+        if args.checkpoint and os.path.isdir(args.checkpoint):
             logger.info('Restore from checkpoint...')
             # loader = tf.train.Saver(net.restorable_variables())
             # loader.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
             saver.restore(sess, tf.train.latest_checkpoint(args.checkpoint))
             logger.info('Restore from checkpoint...Done')
         elif pretrain_path:
-            logger.info('Restore pretrained weights...')
-            if '.ckpt' in pretrain_path:
-                loader = tf.train.Saver(net.restorable_variables())
-                loader.restore(sess, pretrain_path)
-            elif '.npy' in pretrain_path:
+            logger.info('Restore pretrained weights... %s' % pretrain_path)
+            if '.npy' in pretrain_path:
                 net.load(pretrain_path, sess, False)
+            else:
+                try:
+                    loader = tf.train.Saver(net.restorable_variables(only_backbone=False))
+                    loader.restore(sess, pretrain_path)
+                except:
+                    logger.info('Restore only weights in backbone layers.')
+                    loader = tf.train.Saver(net.restorable_variables())
+                    loader.restore(sess, pretrain_path)
             logger.info('Restore pretrained weights...Done')
 
         logger.info('prepare file writer')
@@ -206,11 +213,11 @@ if __name__ == '__main__':
                 break
 
             if gs_num - last_gs_num >= 500:
-                train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, lr_val, summary, queue_size = sess.run([total_loss, total_loss_ll, total_loss_ll_paf, total_loss_ll_heat, learning_rate, merged_summary_op, enqueuer.size()])
+                train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, lr_val, summary = sess.run([total_loss, total_loss_ll, total_loss_ll_paf, total_loss_ll_heat, learning_rate, merged_summary_op])
 
                 # log of training loss / accuracy
                 batch_per_sec = (gs_num - initial_gs_num) / (time.time() - time_started)
-                logger.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g, loss_ll_paf=%g, loss_ll_heat=%g, q=%d' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat, queue_size))
+                logger.info('epoch=%.2f step=%d, %0.4f examples/sec lr=%f, loss=%g, loss_ll=%g, loss_ll_paf=%g, loss_ll_heat=%g' % (gs_num / step_per_epoch, gs_num, batch_per_sec * args.batchsize, lr_val, train_loss, train_loss_ll, train_loss_ll_paf, train_loss_ll_heat))
                 last_gs_num = gs_num
 
                 if last_log_epoch1 < curr_epoch:
@@ -249,7 +256,7 @@ if __name__ == '__main__':
                 sample_image = [enqueuer.last_dp[0][i] for i in range(4)]
                 outputMat = sess.run(
                     outputs,
-                    feed_dict={q_inp: np.array((sample_image + val_image) * (args.batchsize // 16))}
+                    feed_dict={q_inp: np.array((sample_image + val_image) * max(1, (args.batchsize // 16)))}
                 )
                 pafMat, heatMat = outputMat[:, :, :, 19:], outputMat[:, :, :, :19]
 
@@ -280,5 +287,5 @@ if __name__ == '__main__':
                     file_writer.add_summary(summary, curr_epoch)
                     last_log_epoch2 = curr_epoch
 
-        saver.save(sess, os.path.join(modelpath, args.tag, 'model_latest'), global_step=global_step)
+        saver.save(sess, os.path.join(modelpath, args.tag, 'model'), global_step=global_step)
     logger.info('optimization finished. %f' % (time.time() - time_started))
