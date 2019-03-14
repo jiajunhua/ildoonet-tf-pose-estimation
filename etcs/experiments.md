@@ -45,7 +45,8 @@ I have tried multiple variations of models to find optmized network architecture
 | 2014 Val    | Mobilenet thin      | 1     | Image      |     0.2806 |     0.5577 |     0.2474 |     0.2802 |     0.2843 |     0.3214 |     0.5840 |     0.2997 |     0.2946 |     0.3587 |
 | 2014 Val    | Mobilenet-v2 Large  | 1     | Image      |     0.3130 |     0.5846 |     0.2940 |     0.2622 |     0.3850 |     0.3680 |     0.6101 |     0.3637 |     0.2765 |     0.4912 |
 | 2014 Val    | Mobilenet-v2 Small  | 1     | Image      |     0.1730 |     0.4062 |     0.1240 |     0.1501 |     0.2105 |     0.2207 |     0.4505 |     0.1876 |     0.1601 |     0.3020 |
-I also ran keras & caffe models to verify single-scale version's performance, they matched this result.
+
+- I also ran keras & caffe models to verify single-scale version's performance, they matched this result.
 
 ## Computation Budget & Latency
 
