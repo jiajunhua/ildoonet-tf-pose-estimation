@@ -47,4 +47,4 @@ def infer(image, model='cmu', resize='0x0', resize_out_ratio=4.0):
         image_str = cv2.imencode(".jpg", image)[1].tostring()
         print("\033]1337;File=name=;inline=1:" + base64.b64encode(image_str).decode("utf-8") + "\a")
 
-    return [eval.write_coco_json(human, image_w, image_h) for human in humans]
+    return [(eval.write_coco_json(human, image_w, image_h), human.score) for human in humans]
