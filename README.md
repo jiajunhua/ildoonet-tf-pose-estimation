@@ -56,7 +56,7 @@ Alternatively, you can install this repo as a shared package using pip.
 ```bash
 $ git clone https://www.github.com/ildoonet/tf-pose-estimation
 $ cd tf-openpose
-$ python setup.py install
+$ python setup.py install  # Or, `pip install -e .`
 ```
 
 ## Models & Performances
@@ -116,6 +116,13 @@ See [run.py](run.py) or [run_webcam.py](run_webcam.py) as references.
 e = TfPoseEstimator(get_graph_path(args.model), target_size=(w, h))
 humans = e.inference(image)
 image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
+```
+
+If you installed it as a package,
+
+```python
+import tf_pose
+coco_style = tf_pose.infer(image_path)
 ```
 
 ## ROS Support
